@@ -72,8 +72,9 @@ export default function AdminLayout({
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<Link href={link.href} />}
+                        className={isActive ? "bg-orange-50 text-orange-700 font-semibold border-r-2 border-orange-500 rounded-none transform transition-all duration-200" : ""}
                       >
-                        <Icon />
+                        <Icon className={isActive ? "text-orange-600" : ""} />
                         <span>{link.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

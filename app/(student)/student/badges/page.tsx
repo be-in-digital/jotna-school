@@ -6,18 +6,13 @@ import { Loader2, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function StudentBadgesPage() {
-  // For now, use a placeholder studentId. In a real app this would come from auth.
-  // We'll fetch all badges and all earned badges separately.
+  const profile = useQuery(api.profiles.getCurrentProfile);
   const allBadges = useQuery(api.badges.list);
+  const earned = useQuery(api.badges.listEarnedByStudent, 
+    profile?._id ? { studentId: profile._id } : "skip" as any
+  );
 
-  // TODO: Replace with real student ID from auth
-  // const earned = useQuery(api.badges.listEarnedByStudent, { studentId });
-
-  // For the UI, we simulate by showing all as unearned if no auth context
-  // This will be connected to real auth later
-  const earned: Array<{ badgeId: string; earnedAt: number }> = [];
-
-  if (allBadges === undefined) {
+  if (allBadges === undefined || profile === undefined || earned === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -26,7 +21,7 @@ export default function StudentBadgesPage() {
     );
   }
 
-  const earnedBadgeIds = new Set(earned.map((e) => e.badgeId));
+  const earnedBadgeIds = new Set(earned?.map((e) => e.badgeId) || []);
   const earnedCount = earnedBadgeIds.size;
   const totalCount = allBadges.length;
 

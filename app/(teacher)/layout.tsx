@@ -94,8 +94,9 @@ export default function TeacherLayout({
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<Link href={link.href} />}
+                        className={isActive ? "bg-amber-50 text-amber-800 font-semibold border-r-2 border-amber-600 rounded-none transition-all duration-200" : ""}
                       >
-                        <Icon />
+                        <Icon className={isActive ? "text-amber-600" : ""} />
                         <span>{link.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

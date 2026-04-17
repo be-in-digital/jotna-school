@@ -85,8 +85,9 @@ export default function ParentLayout({
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<Link href={link.href} />}
+                        className={isActive ? "bg-lime-50 text-lime-800 font-semibold border-r-2 border-lime-600 rounded-none transition-all duration-200" : ""}
                       >
-                        <Icon />
+                        <Icon className={isActive ? "text-lime-600" : ""} />
                         <span>{link.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

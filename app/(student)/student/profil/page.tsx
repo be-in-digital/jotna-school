@@ -2,11 +2,11 @@
 
 import { Loader2, BookCheck, Award, Clock, Star, Heart } from "lucide-react";
 
-// TODO: Connect to real auth to get studentId
-// import { useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 function formatDuration(ms: number): string {
+  if (!ms || ms <= 0) return "0min";
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -17,29 +17,22 @@ function formatDuration(ms: number): string {
 }
 
 export default function StudentProfilePage() {
-  // TODO: Replace with real data from auth
-  // const stats = useQuery(api.students.getStudentStats, { studentId });
+  const stats = useQuery(api.students.getMyStats);
 
-  // Placeholder data until auth is wired
-  const stats = {
-    student: { name: "Élève", avatar: null },
-    completedTopics: 0,
-    totalExercises: 0,
-    badgeCount: 0,
-    totalTimeMs: 0,
-    favoriteSubject: null as string | null,
-    recentBadges: [] as Array<{
-      _id: string;
-      earnedAt: number;
-      badge: { name: string; icon: string; description: string };
-    }>,
-  };
-
-  if (!stats) {
+  if (stats === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         <span className="ml-3 text-gray-500">Chargement du profil...</span>
+      </div>
+    );
+  }
+
+  if (stats === null) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">
+        <UserCircle className="h-16 w-16 mb-4 opacity-20" />
+        <p>Profil non trouvé. Veuillez vous reconnecter.</p>
       </div>
     );
   }
@@ -55,9 +48,18 @@ export default function StudentProfilePage() {
     <div className="max-w-2xl mx-auto">
       {/* Avatar + name */}
       <div className="flex flex-col items-center mb-8">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-400 text-3xl font-bold text-white shadow-lg">
-          {initials}
-        </div>
+        {stats.student.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={stats.student.avatar}
+            alt={stats.student.name}
+            className="h-24 w-24 rounded-full object-cover shadow-lg"
+          />
+        ) : (
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-400 text-3xl font-bold text-white shadow-lg">
+            {initials}
+          </div>
+        )}
         <h1 className="mt-4 text-2xl font-bold text-gray-900">
           {stats.student.name}
         </h1>

@@ -1,6 +1,7 @@
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 /**
  * Compute where the current student should resume in a given topic session.
@@ -259,6 +260,11 @@ export const submit = mutation({
           masteryLevel: 0,
         });
       }
+
+      // Check and award badges in real-time
+      await ctx.scheduler.runAfter(0, internal.badges.checkAndAward, {
+        studentId: args.studentId,
+      });
     }
 
     // Build the correct answer to return only when max attempts reached
