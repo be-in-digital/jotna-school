@@ -1,6 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { Menu } from "lucide-react";
 
 import { Brand } from "./brand";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 const LINKS = [
   { href: "#comment", label: "Comment ça marche" },
@@ -40,13 +51,56 @@ export function Navbar() {
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-gray-800 active:scale-[0.98]"
+            className="hidden items-center gap-1.5 rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-gray-800 active:scale-[0.98] sm:inline-flex"
           >
             Commencer
             <span aria-hidden className="text-amber-300">
               ✨
             </span>
           </Link>
+
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Ouvrir le menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader className="text-left border-b border-gray-100 pb-4">
+                <SheetTitle>
+                  <Brand size="lg" className="h-16 w-auto" />
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-8 flex flex-col gap-6 px-2">
+                {LINKS.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-lg font-medium text-gray-600 transition-colors hover:text-gray-900"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+                <hr className="border-gray-100" />
+                <div className="flex flex-col gap-3">
+                  <Link
+                    href="/login"
+                    className="flex h-12 items-center justify-center rounded-xl border border-gray-200 text-base font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    Se connecter
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex h-12 items-center justify-center rounded-xl bg-gray-900 text-base font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+                  >
+                    Commencer ✨
+                  </Link>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </nav>
     </header>
