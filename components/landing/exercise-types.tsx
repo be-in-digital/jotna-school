@@ -1,4 +1,5 @@
 import { Section } from "./section";
+import { StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 
 type ExerciseCard = {
   label: string;
@@ -128,11 +129,11 @@ export function ExerciseTypes() {
       title="Cinq formats, toujours ludiques."
       description="Chaque type d'exercice sollicite une compétence différente — pour garder l'attention et varier les plaisirs."
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TYPES.map((t) => (
-          <article
+          <StaggerItem
             key={t.label}
-            className="group flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            className="group flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 transition-all hover:shadow-lg"
           >
             <span className="inline-flex w-fit rounded-full bg-gray-900 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white">
               {t.label}
@@ -148,9 +149,9 @@ export function ExerciseTypes() {
             >
               {t.preview}
             </div>
-          </article>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerContainer>
     </Section>
   );
 }

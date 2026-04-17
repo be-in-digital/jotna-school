@@ -1,4 +1,5 @@
 import { Section } from "./section";
+import { StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 
 const STEPS = [
   {
@@ -35,9 +36,9 @@ export function HowItWorks() {
       title="Trois étapes, zéro friction."
       description="Pas d'installation, pas de configuration compliquée. On se connecte, on apprend."
     >
-      <ol className="grid gap-5 sm:grid-cols-3">
+      <StaggerContainer className="grid gap-5 sm:grid-cols-3">
         {STEPS.map((step) => (
-          <li
+          <StaggerItem
             key={step.number}
             className="group relative flex flex-col rounded-3xl border border-gray-100 bg-white p-6 transition-shadow hover:shadow-lg"
           >
@@ -57,9 +58,9 @@ export function HowItWorks() {
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {step.description}
             </p>
-          </li>
+          </StaggerItem>
         ))}
-      </ol>
+      </StaggerContainer>
     </Section>
   );
 }

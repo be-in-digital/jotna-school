@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Menu } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { Brand } from "./brand";
 import {
@@ -22,7 +23,12 @@ const LINKS = [
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur-md">
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur-md"
+    >
       <nav
         aria-label="Navigation principale"
         className="mx-auto flex h-24 w-full max-w-6xl items-center justify-between px-5 sm:px-8"
@@ -103,6 +109,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </nav>
-    </header>
+    </motion.header>
   );
 }
