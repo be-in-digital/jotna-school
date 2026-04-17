@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, BookCheck, Award, Clock, Star, Heart } from "lucide-react";
+import { Loader2, BookCheck, Award, Clock, Star, Heart, UserCircle } from "lucide-react";
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
