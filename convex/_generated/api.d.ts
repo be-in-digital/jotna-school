@@ -9,15 +9,19 @@
  */
 
 import type * as attempts from "../attempts.js";
+import type * as attemptsExplain from "../attemptsExplain.js";
+import type * as attemptsVerify from "../attemptsVerify.js";
 import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
 import type * as exercises from "../exercises.js";
 import type * as http from "../http.js";
 import type * as pdfUploads from "../pdfUploads.js";
+import type * as pdfUploadsExtract from "../pdfUploadsExtract.js";
 import type * as profiles from "../profiles.js";
 import type * as progress from "../progress.js";
 import type * as reports from "../reports.js";
 import type * as reportsEmail from "../reportsEmail.js";
+import type * as resetContent from "../resetContent.js";
 import type * as students from "../students.js";
 import type * as subjects from "../subjects.js";
 import type * as topics from "../topics.js";
@@ -30,15 +34,19 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
+  attemptsExplain: typeof attemptsExplain;
+  attemptsVerify: typeof attemptsVerify;
   auth: typeof auth;
   badges: typeof badges;
   exercises: typeof exercises;
   http: typeof http;
   pdfUploads: typeof pdfUploads;
+  pdfUploadsExtract: typeof pdfUploadsExtract;
   profiles: typeof profiles;
   progress: typeof progress;
   reports: typeof reports;
   reportsEmail: typeof reportsEmail;
+  resetContent: typeof resetContent;
   students: typeof students;
   subjects: typeof subjects;
   topics: typeof topics;

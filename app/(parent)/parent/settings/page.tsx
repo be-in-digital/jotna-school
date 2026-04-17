@@ -3,16 +3,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuthStore } from "@/stores/auth-store";
-import { Settings, Save, User } from "lucide-react";
+import Link from "next/link";
+import { Settings, Save, User, UserCircle } from "lucide-react";
 
 export default function ParentSettingsPage() {
-  const { user } = useAuthStore();
-
-  const profile = useQuery(
-    api.profiles.getCurrentProfile,
-    user ? { userId: user.id } : "skip",
-  );
+  const profile = useQuery(api.profiles.getCurrentProfile);
 
   const updateProfile = useMutation(api.profiles.updateProfile);
 
@@ -53,10 +48,30 @@ export default function ParentSettingsPage() {
     }
   }
 
-  if (!profile) {
+  if (profile === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (profile === null) {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+        <UserCircle className="mx-auto h-12 w-12 text-gray-400" />
+        <h2 className="mt-3 text-lg font-semibold text-gray-900">
+          Vous n&apos;êtes pas connecté
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Connectez-vous pour accéder à vos paramètres.
+        </p>
+        <Link
+          href="/login"
+          className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+        >
+          Se connecter
+        </Link>
       </div>
     );
   }
@@ -99,18 +114,6 @@ export default function ParentSettingsPage() {
               onChange={(e) => setName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Adresse e-mail
-            </label>
-            <p className="mt-1 text-sm text-gray-500">
-              {user?.email ?? "—"}
-            </p>
-            <p className="mt-0.5 text-xs text-gray-400">
-              L&apos;e-mail ne peut pas être modifié depuis cette page.
-            </p>
           </div>
         </div>
 

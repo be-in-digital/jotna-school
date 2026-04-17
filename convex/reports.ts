@@ -5,6 +5,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // ---------------------------------------------------------------------------
 // Public Queries
@@ -34,6 +35,114 @@ export const listByStudent = query({
     );
 
     return enriched;
+  },
+});
+
+/**
+ * List topic reports for all students linked to the current teacher
+ * via studentGuardians with relation === "professeur".
+ */
+export const listByTeacher = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return [];
+    if (profile.role !== "professeur" && profile.role !== "admin") return [];
+
+    const links = await ctx.db
+      .query("studentGuardians")
+      .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
+      .collect();
+
+    const studentIds = links
+      .filter((l) => l.relation === "professeur")
+      .map((l) => l.studentId);
+
+    if (studentIds.length === 0) return [];
+
+    const allReports = [];
+    for (const studentId of studentIds) {
+      const student = await ctx.db.get(studentId);
+      const reports = await ctx.db
+        .query("topicReports")
+        .withIndex("by_studentId_topicId", (q) =>
+          q.eq("studentId", studentId),
+        )
+        .collect();
+
+      for (const report of reports) {
+        const topic = await ctx.db.get(report.topicId);
+        const subject = topic ? await ctx.db.get(topic.subjectId) : null;
+        allReports.push({
+          ...report,
+          studentName: student?.name ?? "Élève inconnu",
+          topicName: topic?.name ?? "Thématique inconnue",
+          subjectName: subject?.name ?? "Matière inconnue",
+        });
+      }
+    }
+
+    return allReports.sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
+/**
+ * List topic reports for all children linked to the current parent/tuteur
+ * via studentGuardians (relation "parent" or "tuteur").
+ */
+export const listByParent = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return [];
+    if (profile.role !== "parent" && profile.role !== "admin") return [];
+
+    const links = await ctx.db
+      .query("studentGuardians")
+      .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
+      .collect();
+
+    const studentIds = links
+      .filter((l) => l.relation === "parent" || l.relation === "tuteur")
+      .map((l) => l.studentId);
+
+    if (studentIds.length === 0) return [];
+
+    const allReports = [];
+    for (const studentId of studentIds) {
+      const student = await ctx.db.get(studentId);
+      const reports = await ctx.db
+        .query("topicReports")
+        .withIndex("by_studentId_topicId", (q) =>
+          q.eq("studentId", studentId),
+        )
+        .collect();
+
+      for (const report of reports) {
+        const topic = await ctx.db.get(report.topicId);
+        const subject = topic ? await ctx.db.get(topic.subjectId) : null;
+        allReports.push({
+          ...report,
+          studentName: student?.name ?? "Enfant inconnu",
+          topicName: topic?.name ?? "Thématique inconnue",
+          subjectName: subject?.name ?? "Matière inconnue",
+        });
+      }
+    }
+
+    return allReports.sort((a, b) => b._creationTime - a._creationTime);
   },
 });
 

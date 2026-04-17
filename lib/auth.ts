@@ -77,3 +77,26 @@ export async function login(
 export async function logout(signOut: SignOut): Promise<void> {
   return signOut();
 }
+
+// ── Role-based home path ────────────────────────────────────────────────────
+
+export type Role = "admin" | "parent" | "student" | "professeur";
+
+/**
+ * Returns the default landing path for a given profile role.
+ * Used by /post-auth to route users after login or signup.
+ */
+export function roleHomePath(role: Role | null | undefined): string {
+  switch (role) {
+    case "admin":
+      return "/admin/dashboard";
+    case "parent":
+      return "/parent/dashboard";
+    case "professeur":
+      return "/teacher/dashboard";
+    case "student":
+      return "/student/home";
+    default:
+      return "/login";
+  }
+}

@@ -1,5 +1,6 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -49,6 +50,45 @@ export const getById = query({
   args: { id: v.id("exercises") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * List exercises created/reviewed by the current teacher.
+ * Returns exercises where reviewedBy === current profile id.
+ * Returns [] if not a teacher or unauthenticated.
+ */
+export const listByTeacher = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return [];
+    if (profile.role !== "professeur" && profile.role !== "admin") return [];
+
+    const all = await ctx.db.query("exercises").collect();
+    const mine = all.filter((e) => e.reviewedBy === profile._id);
+
+    // Enrich with topic + subject names
+    const enriched = await Promise.all(
+      mine.map(async (ex) => {
+        const topic = await ctx.db.get(ex.topicId);
+        const subject = topic ? await ctx.db.get(topic.subjectId) : null;
+        return {
+          ...ex,
+          topicName: topic?.name ?? "Thématique inconnue",
+          subjectId: topic?.subjectId,
+          subjectName: subject?.name ?? "Matière inconnue",
+        };
+      }),
+    );
+
+    return enriched;
   },
 });
 
@@ -155,6 +195,37 @@ export const unpublish = mutation({
     await ctx.db.patch(args.id, {
       status: "draft",
     });
+  },
+});
+
+/**
+ * Publish every draft exercise generated from a specific PDF upload.
+ * Used by the teacher's PDF detail page to confirm all generated exercises
+ * at once after review.
+ */
+export const publishAllFromUpload = mutation({
+  args: { uploadId: v.id("pdfUploads") },
+  handler: async (ctx, { uploadId }) => {
+    const allExercises = await ctx.db.query("exercises").collect();
+    const relevant = allExercises.filter(
+      (ex) => ex.sourcePdfUploadId === uploadId && ex.status === "draft",
+    );
+    const now = Date.now();
+    for (const ex of relevant) {
+      await ctx.db.patch(ex._id, {
+        status: "published",
+        publishedAt: now,
+      });
+    }
+    // Also mark the upload as "published" so the status progress bar advances
+    const upload = await ctx.db.get(uploadId);
+    if (upload && upload.status !== "published") {
+      await ctx.db.patch(uploadId, {
+        status: "published",
+        publishedAt: now,
+      });
+    }
+    return { published: relevant.length };
   },
 });
 

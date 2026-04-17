@@ -58,6 +58,40 @@ export const update = mutation({
   },
 });
 
+/**
+ * Seed default subjects (CE2-CM2 curriculum, francophone context).
+ * Idempotent: skips subjects that already exist by name.
+ * Can be called from any authenticated user; safe for manual runs via
+ * `pnpx convex run subjects:seedDefaults`.
+ */
+export const seedDefaults = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const defaults = [
+      { name: "Mathématiques", icon: "Calculator", color: "#4f46e5", order: 1 },
+      { name: "Français", icon: "Book", color: "#db2777", order: 2 },
+      { name: "Sciences", icon: "Flask", color: "#10b981", order: 3 },
+      { name: "Histoire-Géographie", icon: "Globe", color: "#f59e0b", order: 4 },
+      { name: "Anglais", icon: "Globe", color: "#0ea5e9", order: 5 },
+      { name: "Arts plastiques", icon: "Palette", color: "#ec4899", order: 6 },
+      { name: "Éducation musicale", icon: "Music", color: "#8b5cf6", order: 7 },
+      { name: "EMC", icon: "Users", color: "#6b7280", order: 8 },
+    ];
+
+    const existing = await ctx.db.query("subjects").collect();
+    const existingNames = new Set(existing.map((s) => s.name));
+
+    const created: string[] = [];
+    for (const subject of defaults) {
+      if (!existingNames.has(subject.name)) {
+        await ctx.db.insert("subjects", subject);
+        created.push(subject.name);
+      }
+    }
+    return { created, skipped: defaults.length - created.length };
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("subjects") },
   handler: async (ctx, args) => {

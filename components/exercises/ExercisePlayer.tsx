@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useExerciseSessionStore } from "@/stores/exercise-session-store";
 import { useGamificationStore } from "@/stores/gamification-store";
-import { Lightbulb, ArrowRight, Loader2 } from "lucide-react";
+import { Lightbulb, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import QcmExercise from "./QcmExercise";
 import MatchExercise from "./MatchExercise";
 import OrderExercise from "./OrderExercise";
@@ -28,6 +28,8 @@ interface ExercisePlayerProps {
   exercises: ExerciseData[];
   topicId: string;
   studentId: string;
+  /** 0-based index to start at; useful for resuming an interrupted session. */
+  initialIndex?: number;
   onComplete: (stats: {
     correctCount: number;
     totalCount: number;
@@ -43,9 +45,16 @@ export default function ExercisePlayer({
   exercises,
   topicId,
   studentId,
+  initialIndex,
   onComplete,
 }: ExercisePlayerProps) {
   const submitAttempt = useMutation(api.attempts.submit);
+  const generateExplanation = useAction(
+    api.attemptsExplain.generateExplanation,
+  );
+  const verifyShortAnswerWithAI = useAction(
+    api.attemptsVerify.verifyShortAnswerWithAI,
+  );
 
   const {
     currentExerciseIndex,
@@ -65,6 +74,8 @@ export default function ExercisePlayer({
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null);
   const [showRevealedAnswer, setShowRevealedAnswer] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [aiExplanationLoading, setAiExplanationLoading] = useState(false);
 
   // Timer
   const exerciseStartTime = useRef<number>(Date.now());
@@ -85,7 +96,12 @@ export default function ExercisePlayer({
         payload: e.payload,
         order: e.order,
       })),
+      initialIndex,
     );
+    // Update the sessionCorrectCount so resumed students don't see 0/N at end
+    if (initialIndex && initialIndex > 0) {
+      setSessionCorrectCount(initialIndex);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -113,6 +129,8 @@ export default function ExercisePlayer({
         setIsCorrect(null);
         setCorrectAnswer(null);
         setShowRevealedAnswer(false);
+        setAiExplanation(null);
+        setAiExplanationLoading(false);
         setIsTransitioning(false);
       }, 300);
     } else {
@@ -146,7 +164,7 @@ export default function ExercisePlayer({
     const timeSpentMs = Date.now() - exerciseStartTime.current;
 
     try {
-      const result = await submitAttempt({
+      let result = await submitAttempt({
         exerciseId: currentExercise._id as Id<"exercises">,
         studentId: studentId as Id<"profiles">,
         submittedAnswer: answer,
@@ -154,6 +172,21 @@ export default function ExercisePlayer({
         hintsUsedCount: hintsRevealed,
         timeSpentMs,
       });
+
+      // Short-answer fallback: if the literal check failed, ask the AI to
+      // semantically verify the answer against the accepted answers.
+      if (!result.isCorrect && result.needsAiVerification && result.attemptId) {
+        try {
+          const aiVerdict = await verifyShortAnswerWithAI({
+            attemptId: result.attemptId,
+          });
+          if (aiVerdict.isCorrect) {
+            result = { ...result, isCorrect: true };
+          }
+        } catch (err) {
+          console.error("AI verification failed:", err);
+        }
+      }
 
       recordAttempt(currentExercise._id, newAttemptCount, hintsRevealed);
 
@@ -175,15 +208,33 @@ export default function ExercisePlayer({
         // Reset isCorrect feedback after 1s so the child can try again
         setTimeout(() => setIsCorrect(null), 1000);
 
-        // If max attempts reached with all hints used, reveal answer
-        if (
-          newAttemptCount >= MAX_ATTEMPTS &&
-          hintsRevealed >= Math.min(MAX_HINTS, availableHints.length)
-        ) {
+        // After MAX_ATTEMPTS wrong answers: reveal the answer + ask the AI
+        // for a personalised pedagogical explanation. We no longer require
+        // all hints to be used — once max attempts is reached, we move on
+        // with help from the AI.
+        if (newAttemptCount >= MAX_ATTEMPTS) {
           setCorrectAnswer(result.correctAnswer ?? null);
           setShowRevealedAnswer(true);
           setSessionTotalTime((prev) => prev + timeSpentMs);
           setSessionTotalHints((prev) => prev + hintsRevealed);
+
+          // Trigger AI explanation in background
+          setAiExplanationLoading(true);
+          generateExplanation({
+            exerciseId: currentExercise._id as Id<"exercises">,
+            studentId: studentId as Id<"profiles">,
+          })
+            .then((res) => {
+              setAiExplanation(res.explanation);
+              if (res.correctAnswer) setCorrectAnswer(res.correctAnswer);
+            })
+            .catch((err) => {
+              console.error("AI explanation failed:", err);
+              setAiExplanation(
+                "Pas d'inquiétude ! Regarde bien la bonne réponse, essaie de comprendre pourquoi, et tu réussiras la prochaine fois.",
+              );
+            })
+            .finally(() => setAiExplanationLoading(false));
         }
       }
     } catch (error) {
@@ -193,8 +244,18 @@ export default function ExercisePlayer({
     }
   };
 
+  // Gradual unlocking of hints based on failed attempts.
+  // With MAX_ATTEMPTS = 5 and MAX_HINTS = 3:
+  //   after 1 failed attempt  → indice 1 unlocked
+  //   after 2 failed attempts → indice 2 unlocked
+  //   after 4 failed attempts → indice 3 (last) unlocked, just before max attempts
+  const unlockedHintsCount = Math.min(
+    availableHints.length,
+    attemptCount >= 4 ? 3 : attemptCount >= 2 ? 2 : attemptCount >= 1 ? 1 : 0,
+  );
+
   const handleRevealHint = () => {
-    if (hintsRevealed < availableHints.length) {
+    if (hintsRevealed < unlockedHintsCount) {
       setHintsRevealed(hintsRevealed + 1);
     }
   };
@@ -202,8 +263,20 @@ export default function ExercisePlayer({
   const showHintButton =
     attemptCount > 0 &&
     isCorrect !== true &&
-    hintsRevealed < availableHints.length &&
+    hintsRevealed < unlockedHintsCount &&
     !showRevealedAnswer;
+
+  // Helper: how many more failed attempts before the next hint unlocks.
+  // Returns null if all hints are unlocked or none are yet available.
+  const nextHintInAttempts = (() => {
+    if (hintsRevealed >= availableHints.length) return null;
+    if (availableHints.length <= hintsRevealed) return null;
+    const nextHintIndex = hintsRevealed; // zero-based: which hint would come next
+    const requiredAttempts =
+      nextHintIndex === 0 ? 1 : nextHintIndex === 1 ? 2 : 4;
+    const remaining = requiredAttempts - attemptCount;
+    return remaining > 0 ? remaining : null;
+  })();
 
   const exerciseDisabled = isSubmitting || isCorrect === true || showRevealedAnswer;
 
@@ -231,10 +304,13 @@ export default function ExercisePlayer({
         </div>
       </div>
 
-      {/* Exercise component */}
+      {/* Exercise component — `key` forces a remount on each exercise change
+          so that every child's local state (input values, selected pairs,
+          dragged items) is reset. */}
       <div className="rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-lg">
         {currentExercise.type === "qcm" && (
           <QcmExercise
+            key={currentExercise._id}
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
@@ -244,6 +320,7 @@ export default function ExercisePlayer({
         )}
         {currentExercise.type === "match" && (
           <MatchExercise
+            key={currentExercise._id}
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
@@ -253,6 +330,7 @@ export default function ExercisePlayer({
         )}
         {currentExercise.type === "order" && (
           <OrderExercise
+            key={currentExercise._id}
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
@@ -262,6 +340,7 @@ export default function ExercisePlayer({
         )}
         {currentExercise.type === "drag-drop" && (
           <DragDropExercise
+            key={currentExercise._id}
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
@@ -271,6 +350,7 @@ export default function ExercisePlayer({
         )}
         {currentExercise.type === "short-answer" && (
           <ShortAnswerExercise
+            key={currentExercise._id}
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
@@ -288,7 +368,7 @@ export default function ExercisePlayer({
         </div>
       )}
 
-      {/* Hints */}
+      {/* Hints — unlocked progressively as the student tries more times */}
       {showHintButton && (
         <button
           onClick={handleRevealHint}
@@ -298,6 +378,20 @@ export default function ExercisePlayer({
           Voir un indice ({hintsRevealed}/{availableHints.length})
         </button>
       )}
+
+      {/* Locked-hint hint: tell the student when the next hint will unlock */}
+      {!showHintButton &&
+        !showRevealedAnswer &&
+        isCorrect !== true &&
+        hintsRevealed < availableHints.length &&
+        nextHintInAttempts !== null && (
+          <div className="flex items-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-5 py-3 text-sm font-medium text-gray-500">
+            <Lightbulb className="h-4 w-4" />
+            Prochain indice débloqué après{" "}
+            {nextHintInAttempts} essai{nextHintInAttempts !== 1 ? "s" : ""}{" "}
+            supplémentaire{nextHintInAttempts !== 1 ? "s" : ""}.
+          </div>
+        )}
 
       {hintsRevealed > 0 && (
         <div className="space-y-2">
@@ -313,16 +407,37 @@ export default function ExercisePlayer({
         </div>
       )}
 
-      {/* Revealed answer */}
-      {showRevealedAnswer && correctAnswer && (
+      {/* Revealed answer + AI explanation */}
+      {showRevealedAnswer && (
         <div className="space-y-4">
-          <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 px-5 py-4 text-base text-indigo-800">
-            <span className="font-bold">La bonne reponse etait : </span>
-            {correctAnswer}
+          {correctAnswer && (
+            <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 px-5 py-4 text-base text-indigo-800">
+              <span className="font-bold">La bonne réponse était : </span>
+              {correctAnswer}
+            </div>
+          )}
+
+          <div className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 px-5 py-4">
+            <div className="flex items-center gap-2 mb-2 text-purple-700 font-bold">
+              <Sparkles className="h-5 w-5" />
+              <span>Explication personnalisée</span>
+            </div>
+            {aiExplanationLoading ? (
+              <div className="flex items-center gap-2 text-purple-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">L&apos;assistant prépare ton explication…</span>
+              </div>
+            ) : (
+              <p className="text-base text-purple-900 whitespace-pre-line leading-relaxed">
+                {aiExplanation ?? "Pas d'inquiétude, tu vas y arriver !"}
+              </p>
+            )}
           </div>
+
           <button
             onClick={handleAdvance}
-            className="flex items-center justify-center gap-2 w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-purple-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.01]"
+            disabled={aiExplanationLoading}
+            className="flex items-center justify-center gap-2 w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-purple-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Exercice suivant
             <ArrowRight className="h-5 w-5" />

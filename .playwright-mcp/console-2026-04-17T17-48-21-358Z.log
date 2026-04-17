@@ -1,0 +1,10 @@
+[     339ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/login:0
+[     396ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/0i1f_next_dist_00kn30-._.js:2431
+[     551ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/0i1f_next_dist_00kn30-._.js:2431
+[    5970ms] [ERROR] [CONVEX A(auth:signIn)] [Request ID: 3d36542f61e357bd] Server Error
+Uncaught Error: InvalidAccountId
+    at retrieveAccount (../../node_modules/.pnpm/@convex-dev+auth@0.0.91_@auth+core@0.37.0_convex@1.35.1_react@19.2.4__react@19.2.4/node_modules/@convex-dev/auth/src/server/implementation/index.ts:602:9)
+    at async authorize [as authorize] (../../node_modules/.pnpm/@convex-dev+auth@0.0.91_@auth+core@0.37.0_convex@1.35.1_react@19.2.4__react@19.2.4/node_modules/@convex-dev/auth/src/providers/Password.ts:157:10)
+    at async handleCredentials (../../node_modules/.pnpm/@convex-dev+auth@0.0.91_@auth+core@0.37.0_convex@1.35.1_react@19.2.4__react@19.2.4/node_modules/@convex-dev/auth/src/server/implementation/signIn.ts:191:6)
+    at async handler (../../node_modules/.pnpm/@convex-dev+auth@0.0.91_@auth+core@0.37.0_convex@1.35.1_react@19.2.4__react@19.2.4/node_modules/@convex-dev/auth/src/server/implementation/index.ts:416:26)
+ @ http://localhost:3000/_next/static/chunks/0i1f_next_dist_00kn30-._.js:3272

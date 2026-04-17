@@ -81,9 +81,58 @@ export const remove = mutation({
       .first();
     if (exercise) {
       throw new Error(
-        "Impossible de supprimer cette thématique car elle contient des exercices.",
+        "Impossible de supprimer cette thématique car elle contient des exercices. Utilisez removeWithExercises pour supprimer en cascade.",
       );
     }
     await ctx.db.delete(args.id);
+  },
+});
+
+/**
+ * Cascade-delete a topic and every exercise + attempt + progress + report
+ * attached to it. Used by the teacher space when a thematic folder must be
+ * removed (for instance an auto-generated "Général" topic from an early
+ * extraction that the teacher wants to clean up).
+ */
+export const removeWithExercises = mutation({
+  args: { id: v.id("topics") },
+  handler: async (ctx, { id }) => {
+    const topic = await ctx.db.get(id);
+    if (!topic) throw new Error("Thématique introuvable");
+
+    // 1. Exercises in this topic
+    const exercises = await ctx.db
+      .query("exercises")
+      .withIndex("by_topicId", (q) => q.eq("topicId", id))
+      .collect();
+
+    // 2. Attempts on those exercises
+    for (const ex of exercises) {
+      // Collect all attempts for this exercise across all students
+      const attempts = await ctx.db
+        .query("attempts")
+        .collect();
+      for (const a of attempts) {
+        if (a.exerciseId === ex._id) await ctx.db.delete(a._id);
+      }
+      await ctx.db.delete(ex._id);
+    }
+
+    // 3. Student progress for this topic
+    const progressRows = await ctx.db.query("studentTopicProgress").collect();
+    for (const p of progressRows) {
+      if (p.topicId === id) await ctx.db.delete(p._id);
+    }
+
+    // 4. Topic reports
+    const reports = await ctx.db.query("topicReports").collect();
+    for (const r of reports) {
+      if (r.topicId === id) await ctx.db.delete(r._id);
+    }
+
+    // 5. Finally, the topic itself
+    await ctx.db.delete(id);
+
+    return { deletedExercises: exercises.length };
   },
 });

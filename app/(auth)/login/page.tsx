@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn("password", { email, password, flow: "signIn" });
-      router.push("/student/home");
+      router.replace("/post-auth");
     } catch {
       setError("Email ou mot de passe incorrect");
     } finally {
@@ -44,7 +44,7 @@ export default function LoginPage() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
@@ -55,21 +55,21 @@ export default function LoginPage() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
       >
         {loading ? "Connexion..." : "Se connecter"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
         Pas de compte ?{" "}
-        <Link href="/register" className="text-indigo-600 hover:underline">
+        <Link href="/register" className="font-medium text-amber-700 hover:underline">
           Créer un compte
         </Link>
       </p>

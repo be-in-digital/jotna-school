@@ -1,15 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
-  GraduationCap,
   LayoutDashboard,
   Users,
+  FileBarChart,
   Settings,
-  UserCircle,
 } from "lucide-react";
+
+import { Brand } from "@/components/landing/brand";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { UserMenu } from "@/components/ui/user-menu";
 
 const sidebarLinks = [
   { href: "/parent/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/parent/children/add", label: "Ajouter un enfant", icon: Users },
+  { href: "/parent/children", label: "Mes enfants", icon: Users },
+  { href: "/parent/reports", label: "Rapports", icon: FileBarChart },
   { href: "/parent/settings", label: "Paramètres", icon: Settings },
 ];
 
@@ -18,44 +41,78 @@ export default function ParentLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const profile = useQuery(api.profiles.getCurrentProfile);
+
+  // Role guard: redirect non-parent users (professeurs/students/admins) away
+  useEffect(() => {
+    if (profile === undefined || profile === null) return;
+    if (profile.role === "professeur") {
+      router.replace("/teacher/dashboard");
+    } else if (profile.role === "admin") {
+      router.replace("/admin/dashboard");
+    } else if (profile.role === "student") {
+      router.replace("/student/home");
+    }
+  }, [profile, router]);
+
+  const roleLabel = "Parent";
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="hidden w-60 flex-shrink-0 border-r border-gray-200 bg-white lg:block">
-        <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-6">
-          <GraduationCap className="h-7 w-7 text-teal-600" />
-          <span className="text-lg font-bold text-gray-900">Jotna School</span>
-          <span className="ml-1 rounded bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-700">
-            Parent
-          </span>
-        </div>
-        <nav className="mt-4 flex flex-col gap-1 px-3">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-teal-50 hover:text-teal-700"
-            >
-              <link.icon className="h-5 w-5" />
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Main content area */}
-      <div className="flex flex-1 flex-col">
-        {/* Top header */}
-        <header className="flex h-16 items-center justify-end border-b border-gray-200 bg-white px-4 lg:px-8">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <UserCircle className="h-8 w-8 text-gray-400" />
-            <span className="hidden font-medium sm:inline">Parent</span>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2 px-2 py-2">
+            <Brand size="sm" />
+            <span className="ml-auto rounded bg-lime-100 px-2 py-0.5 text-xs font-medium text-lime-800">
+              {roleLabel}
+            </span>
           </div>
-        </header>
+        </SidebarHeader>
 
-        {/* Page content */}
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {sidebarLinks.map((link) => {
+                  const isActive =
+                    pathname === link.href ||
+                    pathname.startsWith(`${link.href}/`);
+                  const Icon = link.icon;
+                  return (
+                    <SidebarMenuItem key={link.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        render={<Link href={link.href} />}
+                      >
+                        <Icon />
+                        <span>{link.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <UserMenu
+            profileHref="/parent/settings"
+            settingsHref="/parent/settings"
+            fallbackLabel={roleLabel}
+          />
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="flex h-16 items-center gap-2 border-b bg-background px-4">
+          <SidebarTrigger />
+          <div className="text-sm font-medium text-gray-500">Espace {roleLabel.toLowerCase()}</div>
+        </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

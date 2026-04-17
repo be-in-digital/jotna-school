@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - img [ref=e8]
+        - generic [ref=e11]: Jotna School
+        - generic [ref=e12]: Parent
+      - list [ref=e16]:
+        - listitem [ref=e17]:
+          - link "Tableau de bord" [ref=e18] [cursor=pointer]:
+            - /url: /parent/dashboard
+            - img [ref=e19]
+            - generic [ref=e24]: Tableau de bord
+        - listitem [ref=e25]:
+          - link "Mes enfants" [ref=e26] [cursor=pointer]:
+            - /url: /parent/children
+            - img [ref=e27]
+            - generic [ref=e32]: Mes enfants
+        - listitem [ref=e33]:
+          - link "Rapports" [ref=e34] [cursor=pointer]:
+            - /url: /parent/reports
+            - img [ref=e35]
+            - generic [ref=e38]: Rapports
+        - listitem [ref=e39]:
+          - link "Paramètres" [ref=e40] [cursor=pointer]:
+            - /url: /parent/settings
+            - img [ref=e41]
+            - generic [ref=e44]: Paramètres
+      - generic [ref=e46]:
+        - img [ref=e47]
+        - generic [ref=e51]: Parent
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - button "Toggle Sidebar" [ref=e54]:
+          - img
+          - generic [ref=e55]: Toggle Sidebar
+        - generic [ref=e56]: Espace parent
+      - main [ref=e57]
+  - button "Open Next.js Dev Tools" [ref=e65] [cursor=pointer]:
+    - img [ref=e66]

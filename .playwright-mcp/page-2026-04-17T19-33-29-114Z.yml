@@ -1,0 +1,329 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - navigation "Navigation principale" [ref=e4]:
+        - link "Jotna School, retour à l'accueil" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img "Jotna School" [ref=e6]
+        - list [ref=e7]:
+          - listitem [ref=e8]:
+            - link "Comment ça marche" [ref=e9] [cursor=pointer]:
+              - /url: "#comment"
+          - listitem [ref=e10]:
+            - link "Exercices" [ref=e11] [cursor=pointer]:
+              - /url: "#exercices"
+          - listitem [ref=e12]:
+            - link "Pour qui" [ref=e13] [cursor=pointer]:
+              - /url: "#pour-qui"
+          - listitem [ref=e14]:
+            - link "FAQ" [ref=e15] [cursor=pointer]:
+              - /url: "#faq"
+        - generic [ref=e16]:
+          - link "Se connecter" [ref=e17] [cursor=pointer]:
+            - /url: /login
+          - link "Commencer" [ref=e18] [cursor=pointer]:
+            - /url: /register
+            - text: Commencer
+            - generic [ref=e19]: ✨
+    - main [ref=e20]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e25]
+            - text: 100 % gratuit · Sans pub
+          - heading "Apprendre devient un jeu ." [level=1] [ref=e28]:
+            - text: Apprendre devient
+            - generic [ref=e29]: un jeu
+            - text: .
+          - paragraph [ref=e31]: Des exercices interactifs, des badges à collectionner et un suivi clair pour les parents. Jotna aide les enfants à progresser en maths, français et bien plus — à leur rythme.
+          - generic [ref=e32]:
+            - link "Créer un compte gratuit" [ref=e33] [cursor=pointer]:
+              - /url: /register
+              - text: Créer un compte gratuit
+              - img [ref=e34]
+            - link "Voir comment ça marche" [ref=e36] [cursor=pointer]:
+              - /url: "#comment"
+          - list [ref=e37]:
+            - listitem [ref=e38]:
+              - img [ref=e39]
+              - text: Adapté CP → CM2
+            - listitem [ref=e42]:
+              - img [ref=e43]
+              - text: Rapports parents
+            - listitem [ref=e46]:
+              - img [ref=e47]
+              - text: Sans installation
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - generic [ref=e53]:
+                - generic [ref=e54]: 🧮
+                - generic [ref=e55]:
+                  - paragraph [ref=e56]: Mathématiques
+                  - paragraph [ref=e57]: Les fractions
+              - generic [ref=e58]: En cours
+            - paragraph [ref=e60]: Combien fait ½ + ¼ ?
+            - generic [ref=e61]:
+              - generic [ref=e62]:
+                - generic [ref=e63]: ¾
+                - img [ref=e64]
+              - generic [ref=e68]: ⅔
+              - generic [ref=e70]: ⅛
+              - generic [ref=e72]: "1"
+            - generic [ref=e73]:
+              - generic [ref=e74]: Maîtrise du chapitre
+              - generic [ref=e75]: 68 %
+          - generic [ref=e78]:
+            - img [ref=e80]
+            - generic [ref=e87]:
+              - paragraph [ref=e88]: Badge débloqué
+              - paragraph [ref=e89]: Petit matheux
+          - generic [ref=e90]:
+            - generic [ref=e91]: 🔥
+            - generic [ref=e92]:
+              - paragraph [ref=e93]: Série
+              - paragraph [ref=e94]: 5 jours d'affilée
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - paragraph [ref=e97]: Comment ça marche
+          - heading "Trois étapes, zéro friction." [level=2] [ref=e98]
+          - paragraph [ref=e99]: Pas d'installation, pas de configuration compliquée. On se connecte, on apprend.
+        - list [ref=e101]:
+          - listitem [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]: Étape 01
+              - generic [ref=e105]: 👤
+            - heading "Crée ton profil" [level=3] [ref=e106]
+            - paragraph [ref=e107]: Les enfants créent leur avatar. Les parents gèrent plusieurs profils depuis un seul compte.
+          - listitem [ref=e108]:
+            - generic [ref=e109]:
+              - generic [ref=e110]: Étape 02
+              - generic [ref=e111]: 🎯
+            - heading "Choisis une matière" [level=3] [ref=e112]
+            - paragraph [ref=e113]: Maths, français, sciences… chaque matière contient des chapitres adaptés au niveau scolaire.
+          - listitem [ref=e114]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: Étape 03
+              - generic [ref=e117]: 🏆
+            - heading "Progresse et gagne des badges" [level=3] [ref=e118]
+            - paragraph [ref=e119]: Chaque exercice réussi fait grimper la jauge de maîtrise et débloque des récompenses.
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - paragraph [ref=e122]: Exercices
+          - heading "Cinq formats, toujours ludiques." [level=2] [ref=e123]
+          - paragraph [ref=e124]: Chaque type d'exercice sollicite une compétence différente — pour garder l'attention et varier les plaisirs.
+        - generic [ref=e126]:
+          - article [ref=e127]:
+            - generic [ref=e128]: QCM
+            - heading "Questions à choix multiples" [level=3] [ref=e129]
+            - paragraph [ref=e130]: Quatre propositions, une bonne réponse. Simple et efficace.
+            - generic [ref=e132]:
+              - generic [ref=e133]: "12"
+              - generic [ref=e134]: "8"
+              - generic [ref=e135]: "15"
+              - generic [ref=e136]: "6"
+          - article [ref=e137]:
+            - generic [ref=e138]: Glisser-déposer
+            - heading "Drag & drop" [level=3] [ref=e139]
+            - paragraph [ref=e140]: Classer, trier, ranger — par le geste.
+            - generic [ref=e142]:
+              - generic [ref=e143]: 🍎 Fruits
+              - generic [ref=e144]:
+                - generic [ref=e145]: pomme
+                - generic [ref=e146]: fraise
+          - article [ref=e147]:
+            - generic [ref=e148]: Association
+            - heading "Relier les paires" [level=3] [ref=e149]
+            - paragraph [ref=e150]: Associer des mots, images ou concepts qui vont ensemble.
+            - generic [ref=e152]:
+              - generic [ref=e153]: chat
+              - generic [ref=e154]: ↔
+              - generic [ref=e155]: miauler
+              - generic [ref=e156]: chien
+              - generic [ref=e157]: ↔
+              - generic [ref=e158]: aboyer
+          - article [ref=e159]:
+            - generic [ref=e160]: Mise en ordre
+            - heading "Remettre en ordre" [level=3] [ref=e161]
+            - paragraph [ref=e162]: Chronologie, étapes, lettres d'un mot — dans le bon ordre.
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - generic [ref=e166]: "1"
+                - generic [ref=e167]: L
+              - generic [ref=e168]:
+                - generic [ref=e169]: "2"
+                - generic [ref=e170]: I
+              - generic [ref=e171]:
+                - generic [ref=e172]: "3"
+                - generic [ref=e173]: V
+              - generic [ref=e174]:
+                - generic [ref=e175]: "4"
+                - generic [ref=e176]: R
+              - generic [ref=e177]:
+                - generic [ref=e178]: "5"
+                - generic [ref=e179]: E
+          - article [ref=e180]:
+            - generic [ref=e181]: Réponse libre
+            - heading "Réponse courte" [level=3] [ref=e182]
+            - paragraph [ref=e183]: Écrire la solution — l'orthographe compte.
+            - generic [ref=e185]:
+              - paragraph [ref=e186]: Ta réponse
+              - paragraph [ref=e187]: "42"
+      - generic [ref=e189]:
+        - generic [ref=e190]:
+          - paragraph [ref=e191]: Pour qui
+          - heading "Un outil pensé pour toute la famille." [level=2] [ref=e192]
+          - paragraph [ref=e193]: Chaque rôle dispose de son espace. Les enfants apprennent, les adultes accompagnent.
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - img [ref=e199]
+              - generic [ref=e201]: 🎒
+            - heading "Pour les enfants" [level=3] [ref=e202]
+            - list [ref=e203]:
+              - listitem [ref=e204]:
+                - generic [ref=e206]: Des exercices courts et variés
+              - listitem [ref=e207]:
+                - generic [ref=e209]: Des badges pour chaque étape
+              - listitem [ref=e210]:
+                - generic [ref=e212]: Une jauge de progression visuelle
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - img [ref=e216]
+              - generic [ref=e218]: 💚
+            - heading "Pour les parents" [level=3] [ref=e219]
+            - list [ref=e220]:
+              - listitem [ref=e221]:
+                - generic [ref=e223]: Tableau de bord pour plusieurs enfants
+              - listitem [ref=e224]:
+                - generic [ref=e226]: Rapports clairs par chapitre
+              - listitem [ref=e227]:
+                - generic [ref=e229]: Notifications quand un badge est gagné
+          - generic [ref=e230]:
+            - generic [ref=e231]:
+              - img [ref=e233]
+              - generic [ref=e236]: 🧑‍🏫
+            - heading "Pour les professeurs" [level=3] [ref=e237]
+            - list [ref=e238]:
+              - listitem [ref=e239]:
+                - generic [ref=e241]: Suivi individuel des élèves
+              - listitem [ref=e242]:
+                - generic [ref=e244]: Détection des difficultés récurrentes
+              - listitem [ref=e245]:
+                - generic [ref=e247]: Contenus validés avant publication
+      - generic [ref=e248]:
+        - generic [ref=e249]:
+          - paragraph [ref=e250]: Gamification
+          - heading "La motivation, intégrée au parcours." [level=2] [ref=e251]
+          - paragraph [ref=e252]: "Rien d'artificiel : chaque récompense traduit une vraie compétence acquise."
+        - generic [ref=e254]:
+          - article [ref=e255]:
+            - generic [ref=e256]:
+              - img [ref=e258]
+              - generic [ref=e262]:
+                - heading "Maîtrise" [level=3] [ref=e263]
+                - paragraph [ref=e264]: Jauge par chapitre
+            - generic [ref=e265]:
+              - generic [ref=e267]:
+                - generic [ref=e268]: Les fractions
+                - generic [ref=e269]: 82%
+              - generic [ref=e273]:
+                - generic [ref=e274]: Conjugaison
+                - generic [ref=e275]: 54%
+              - generic [ref=e279]:
+                - generic [ref=e280]: Le vivant
+                - generic [ref=e281]: 31%
+          - article [ref=e284]:
+            - generic [ref=e285]:
+              - img [ref=e287]
+              - generic [ref=e293]:
+                - heading "Badges" [level=3] [ref=e294]
+                - paragraph [ref=e295]: À collectionner
+            - generic [ref=e296]:
+              - generic [ref=e297]:
+                - generic [ref=e298]: 🧮
+                - generic [ref=e299]: Petit matheux
+              - generic [ref=e300]:
+                - generic [ref=e301]: 📖
+                - generic [ref=e302]: Lecteur curieux
+              - generic [ref=e303]:
+                - generic [ref=e304]: 🔬
+                - generic [ref=e305]: Apprenti savant
+              - generic [ref=e306]:
+                - generic [ref=e307]: 🌍
+                - generic [ref=e308]: Globe-trotteur
+            - paragraph [ref=e309]: Plus de 20 badges à débloquer au fil des chapitres.
+          - article [ref=e310]:
+            - generic [ref=e311]:
+              - img [ref=e313]
+              - generic [ref=e315]:
+                - heading "Série quotidienne" [level=3] [ref=e316]
+                - paragraph [ref=e317]: Un peu chaque jour
+            - generic [ref=e318]:
+              - generic [ref=e321]: J1
+              - generic [ref=e324]: J2
+              - generic [ref=e327]: J3
+              - generic [ref=e330]: J4
+              - generic [ref=e333]: J5
+              - generic [ref=e336]: J6
+              - generic [ref=e339]: J7
+            - paragraph [ref=e340]: 5 jours d'affilée — bravo !
+      - generic [ref=e341]:
+        - generic [ref=e342]:
+          - paragraph [ref=e343]: Questions fréquentes
+          - heading "Tout ce que vous vous demandez." [level=2] [ref=e344]
+          - paragraph [ref=e345]: Les réponses aux questions qui reviennent le plus souvent.
+        - region [ref=e347]:
+          - heading "L'application est-elle vraiment gratuite ?" [level=3] [ref=e349]:
+            - button "L'application est-elle vraiment gratuite ?" [ref=e350]:
+              - generic [ref=e351]: L'application est-elle vraiment gratuite ?
+              - img [ref=e352]
+          - heading "À quel âge s'adresse Jotna ?" [level=3] [ref=e354]:
+            - button "À quel âge s'adresse Jotna ?" [ref=e355]:
+              - generic [ref=e356]: À quel âge s'adresse Jotna ?
+              - img [ref=e357]
+          - heading "Mon enfant a besoin d'une adresse email ?" [level=3] [ref=e359]:
+            - button "Mon enfant a besoin d'une adresse email ?" [ref=e360]:
+              - generic [ref=e361]: Mon enfant a besoin d'une adresse email ?
+              - img [ref=e362]
+          - heading "Comment sont conçus les exercices ?" [level=3] [ref=e364]:
+            - button "Comment sont conçus les exercices ?" [ref=e365]:
+              - generic [ref=e366]: Comment sont conçus les exercices ?
+              - img [ref=e367]
+          - heading "Quelles données sont collectées sur mon enfant ?" [level=3] [ref=e369]:
+            - button "Quelles données sont collectées sur mon enfant ?" [ref=e370]:
+              - generic [ref=e371]: Quelles données sont collectées sur mon enfant ?
+              - img [ref=e372]
+          - heading "Peut-on utiliser Jotna sur tablette ou mobile ?" [level=3] [ref=e374]:
+            - button "Peut-on utiliser Jotna sur tablette ou mobile ?" [ref=e375]:
+              - generic [ref=e376]: Peut-on utiliser Jotna sur tablette ou mobile ?
+              - img [ref=e377]
+      - generic [ref=e380]:
+        - generic [ref=e381]: Prêt en 30 secondes
+        - heading "Lance la première session." [level=2] [ref=e383]
+        - paragraph [ref=e384]: Créer un compte, choisir une matière, et c'est parti. Aucune carte bancaire, aucun téléchargement.
+        - generic [ref=e385]:
+          - link "Commencer gratuitement" [ref=e386] [cursor=pointer]:
+            - /url: /register
+            - text: Commencer gratuitement
+            - img [ref=e387]
+          - link "J'ai déjà un compte" [ref=e389] [cursor=pointer]:
+            - /url: /login
+    - contentinfo [ref=e390]:
+      - generic [ref=e391]:
+        - generic [ref=e392]:
+          - link "Jotna School, retour à l'accueil" [ref=e393] [cursor=pointer]:
+            - /url: /
+            - img "Jotna School" [ref=e394]
+          - paragraph [ref=e395]: Apprendre en s'amusant, du CP au CM2.
+        - navigation "Liens de pied de page" [ref=e396]:
+          - link "Se connecter" [ref=e397] [cursor=pointer]:
+            - /url: /login
+          - link "Créer un compte" [ref=e398] [cursor=pointer]:
+            - /url: /register
+          - link "FAQ" [ref=e399] [cursor=pointer]:
+            - /url: "#faq"
+        - paragraph [ref=e400]: © 2026 Jotna School
+  - button "Open Next.js Dev Tools" [ref=e406] [cursor=pointer]:
+    - img [ref=e407]
+  - alert [ref=e410]

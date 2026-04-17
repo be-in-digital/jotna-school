@@ -24,7 +24,11 @@ interface ExerciseSessionState {
 }
 
 interface ExerciseSessionActions {
-  startSession: (topicId: string, exercises: Exercise[]) => void;
+  startSession: (
+    topicId: string,
+    exercises: Exercise[],
+    initialIndex?: number,
+  ) => void;
   nextExercise: () => void;
   recordAttempt: (
     exerciseId: string,
@@ -45,11 +49,14 @@ export const useExerciseSessionStore = create<
   sessionStartTime: null,
   isComplete: false,
 
-  startSession: (topicId, exercises) =>
+  startSession: (topicId, exercises, initialIndex = 0) =>
     set({
       currentTopicId: topicId,
       exercises,
-      currentExerciseIndex: 0,
+      currentExerciseIndex: Math.max(
+        0,
+        Math.min(initialIndex, exercises.length - 1),
+      ),
       attempts: new Map(),
       sessionStartTime: Date.now(),
       isComplete: false,

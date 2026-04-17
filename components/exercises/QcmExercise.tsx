@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, X } from "lucide-react";
+import ExercisePrompt from "./ExercisePrompt";
 
 interface QcmPayload {
   options: string[];
@@ -44,9 +45,7 @@ export default function QcmExercise({
 
   return (
     <div className="space-y-6">
-      <p className="text-xl font-bold text-gray-900 leading-relaxed">
-        {prompt}
-      </p>
+      <ExercisePrompt prompt={prompt} />
 
       <div className="space-y-3">
         {options.map((option, index) => {

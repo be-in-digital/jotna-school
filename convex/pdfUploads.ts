@@ -2,16 +2,11 @@ import { v } from "convex/values";
 import {
   query,
   mutation,
-  internalAction,
   internalMutation,
   internalQuery,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import OpenAI from "openai";
-import {
-  exerciseExtractionSchema,
-  type ExtractionResponse,
-} from "../lib/openai-schema";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -25,6 +20,40 @@ export const list = query({
 
     const results = await Promise.all(
       uploads.map(async (upload) => {
+        const subject = await ctx.db.get(upload.subjectId);
+        return {
+          ...upload,
+          subjectName: subject?.name ?? "Inconnu",
+        };
+      }),
+    );
+
+    return results;
+  },
+});
+
+/**
+ * List PDF uploads owned by the current teacher (adminId === profile._id).
+ * Returns [] if not a teacher/admin or unauthenticated.
+ */
+export const listByTeacher = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return [];
+    if (profile.role !== "professeur" && profile.role !== "admin") return [];
+
+    const uploads = await ctx.db.query("pdfUploads").order("desc").collect();
+    const mine = uploads.filter((u) => u.adminId === profile._id);
+
+    const results = await Promise.all(
+      mine.map(async (upload) => {
         const subject = await ctx.db.get(upload.subjectId);
         return {
           ...upload,
@@ -95,7 +124,7 @@ export const create = mutation({
     });
 
     // Schedule the extraction immediately
-    await ctx.scheduler.runAfter(0, internal.pdfUploads.extract, { uploadId });
+    await ctx.scheduler.runAfter(0, internal.pdfUploadsExtract.extract, { uploadId });
 
     return uploadId;
   },
@@ -183,20 +212,48 @@ export const createDraftExercises = internalMutation({
       }),
     ),
     subjectId: v.id("subjects"),
+    suggestedTopicName: v.optional(v.string()),
   },
-  handler: async (ctx, { uploadId, exercises, subjectId }) => {
-    // Find or use the first topic for this subject as a default
+  handler: async (ctx, { uploadId, exercises, subjectId, suggestedTopicName }) => {
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_subjectId", (q) => q.eq("subjectId", subjectId))
       .collect();
 
-    const defaultTopicId = topics[0]?._id;
-    if (!defaultTopicId) {
-      throw new Error(
-        `Aucun thème trouvé pour la matière. Créez d'abord un thème.`,
-      );
+    // Resolve a target topic in this order:
+    // 1. If the IA suggested a topic name and one already exists (case-insensitive match) → reuse it
+    // 2. If the IA suggested a topic name → create a new topic with that name
+    // 3. Else fall back to the first existing topic
+    // 4. Else create a "Général" topic as last resort
+    let targetTopicId;
+
+    const suggested = suggestedTopicName?.trim();
+    if (suggested) {
+      const normalized = suggested.toLowerCase();
+      const existing = topics.find((t) => t.name.toLowerCase() === normalized);
+      if (existing) {
+        targetTopicId = existing._id;
+      } else {
+        targetTopicId = await ctx.db.insert("topics", {
+          subjectId,
+          name: suggested,
+          description: `Thème identifié automatiquement lors de l'import d'un PDF.`,
+          order: topics.length + 1,
+        });
+      }
+    } else if (topics.length > 0) {
+      targetTopicId = topics[0]._id;
+    } else {
+      targetTopicId = await ctx.db.insert("topics", {
+        subjectId,
+        name: "Général",
+        description:
+          "Thème créé automatiquement lors de l'import d'un PDF. Vous pouvez le renommer ou le réorganiser.",
+        order: 1,
+      });
     }
+
+    const defaultTopicId = targetTopicId;
 
     for (let i = 0; i < exercises.length; i++) {
       const ex = exercises[i];
@@ -217,118 +274,8 @@ export const createDraftExercises = internalMutation({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Internal action: AI extraction
-// ---------------------------------------------------------------------------
-
-/** Fetch PDF content, call OpenAI GPT-4, and create draft exercises. */
-export const extract = internalAction({
-  args: { uploadId: v.id("pdfUploads") },
-  handler: async (ctx, { uploadId }) => {
-    // 1. Get the upload document
-    const upload = await ctx.runQuery(internal.pdfUploads.getUploadInternal, {
-      uploadId,
-    });
-    if (!upload) {
-      await ctx.runMutation(internal.pdfUploads.markError, {
-        uploadId,
-        error: "Upload introuvable.",
-      });
-      return;
-    }
-
-    try {
-      // 2. Get the file URL
-      const fileUrl = await ctx.storage.getUrl(upload.storageId);
-      if (!fileUrl) {
-        throw new Error("Impossible de récupérer l'URL du fichier.");
-      }
-
-      // 3. Fetch the file content
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(`Erreur lors du téléchargement du fichier: ${response.status}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const base64Content = Buffer.from(arrayBuffer).toString("base64");
-
-      // 4. Call OpenAI GPT-4 with Structured Outputs
-      const openai = new OpenAI();
-
-      const completion = await openai.responses.create({
-        model: "gpt-4o",
-        store: false,
-        instructions: `Tu es un assistant pédagogique spécialisé dans la création d'exercices pour les élèves de CE2 à CM2 (8-11 ans).
-Analyse le document PDF fourni et extrais tous les exercices que tu peux identifier.
-Pour chaque exercice, détermine le type le plus approprié parmi:
-- qcm: Question à choix multiples. Payload: {options: string[], correctIndex: number, explanation?: string}
-- match: Association de paires. Payload: {pairs: [{left: string, right: string}]}
-- order: Remise en ordre. Payload: {correctSequence: string[]}
-- drag-drop: Glisser-déposer dans des zones. Payload: {zones: string[], items: [{text: string, correctZone: string}]}
-- short-answer: Réponse courte. Payload: {acceptedAnswers: string[], tolerance?: string}
-
-Pour chaque exercice, fournis:
-- Un énoncé clair adapté au niveau CE2-CM2
-- Le payload correspondant au type choisi
-- La réponse correcte sous forme lisible (answerKey)
-- Exactement 3 indices progressifs (du plus vague au plus précis)
-
-Si le document ne contient pas d'exercices identifiables, crée des exercices pertinents basés sur le contenu du document.`,
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_file" as const,
-                filename: upload.originalFilename,
-                file_data: `data:${upload.mimeType};base64,${base64Content}`,
-              },
-              {
-                type: "input_text" as const,
-                text: `Analyse ce document PDF et extrais les exercices pour le niveau CE2-CM2. Nom du fichier: ${upload.originalFilename}`,
-              },
-            ],
-          },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            ...exerciseExtractionSchema,
-          },
-        },
-      });
-
-      // Parse the response
-      const outputText = completion.output_text;
-      const extraction: ExtractionResponse = JSON.parse(outputText);
-
-      // 5. Store the raw extraction and mark as extracted
-      await ctx.runMutation(internal.pdfUploads.markExtracted, {
-        uploadId,
-        extractedRaw: extraction,
-        extractedAt: Date.now(),
-      });
-
-      // 6. Create draft exercises
-      if (extraction.exercises.length > 0) {
-        await ctx.runMutation(internal.pdfUploads.createDraftExercises, {
-          uploadId,
-          exercises: extraction.exercises,
-          subjectId: upload.subjectId,
-        });
-      }
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Erreur inconnue";
-      console.error("Extraction error:", message);
-      await ctx.runMutation(internal.pdfUploads.markError, {
-        uploadId,
-        error: message,
-      });
-    }
-  },
-});
+// NOTE: the internalAction `extract` lives in convex/pdfUploadsExtract.ts
+// (Node runtime) so it can use Node's `Buffer` to base64-encode the PDF.
 
 // ---------------------------------------------------------------------------
 // Internal query (used by the extract action)

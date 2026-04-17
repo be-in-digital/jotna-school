@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // ---------------------------------------------------------------------------
 // Queries for admin student management
@@ -142,6 +143,105 @@ export const getStudentDetail = query({
       earnedBadges: badgesWithInfo,
       recentAttempts: attemptsWithInfo,
     };
+  },
+});
+
+/**
+ * Auth-scoped wrapper: returns stats for the currently-logged-in student.
+ * Used by the student's profile page — the client doesn't have to pass
+ * (and possibly spoof) a studentId.
+ */
+export const getMyStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") return null;
+
+    const studentId = profile._id;
+
+    const progress = await ctx.db
+      .query("studentTopicProgress")
+      .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
+      .collect();
+    const completedTopics = progress.filter((p) => p.completedAt != null).length;
+    const totalExercises = progress.reduce(
+      (s, p) => s + p.completedExercises,
+      0,
+    );
+
+    const earnedBadges = await ctx.db
+      .query("earnedBadges")
+      .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
+      .collect();
+    const badgesWithInfo = [];
+    for (const eb of earnedBadges) {
+      const badge = await ctx.db.get(eb.badgeId);
+      if (badge) badgesWithInfo.push({ ...eb, badge });
+    }
+
+    const attempts = await ctx.db
+      .query("attempts")
+      .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
+      .collect();
+    const totalTimeMs = attempts.reduce((s, a) => s + a.timeSpentMs, 0);
+
+    const subjectCounts: Record<string, { name: string; count: number }> = {};
+    for (const p of progress) {
+      if (p.completedAt == null) continue;
+      const topic = await ctx.db.get(p.topicId);
+      if (!topic) continue;
+      const subject = await ctx.db.get(topic.subjectId);
+      if (!subject) continue;
+      if (!subjectCounts[subject._id]) {
+        subjectCounts[subject._id] = { name: subject.name, count: 0 };
+      }
+      subjectCounts[subject._id].count += 1;
+    }
+    const favoriteSubject =
+      Object.values(subjectCounts).sort((a, b) => b.count - a.count)[0]?.name ??
+      null;
+
+    return {
+      student: profile,
+      completedTopics,
+      totalExercises,
+      badgeCount: earnedBadges.length,
+      totalTimeMs,
+      favoriteSubject,
+      recentBadges: badgesWithInfo
+        .sort((a, b) => b.earnedAt - a.earnedAt)
+        .slice(0, 3),
+    };
+  },
+});
+
+/**
+ * Auth-scoped: return badges earned by the currently-logged-in student.
+ */
+export const getMyEarnedBadges = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile) return [];
+    const earned = await ctx.db
+      .query("earnedBadges")
+      .withIndex("by_studentId", (q) => q.eq("studentId", profile._id))
+      .collect();
+    return earned.map((e) => ({
+      _id: e._id,
+      badgeId: e.badgeId as string,
+      earnedAt: e.earnedAt,
+    }));
   },
 });
 

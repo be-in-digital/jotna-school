@@ -22,7 +22,7 @@ export default function StudentHomePage() {
   if (subjects === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
         <span className="ml-3 text-gray-500">Chargement...</span>
       </div>
     );
@@ -31,7 +31,7 @@ export default function StudentHomePage() {
   return (
     <div className="space-y-8">
       {/* Welcome */}
-      <div className="rounded-3xl bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500 p-6 text-white shadow-xl">
+      <div className="rounded-3xl bg-gradient-to-r from-amber-400 via-orange-500 to-lime-600 p-6 text-white shadow-xl">
         <h1 className="text-3xl font-extrabold">
           Bonjour ! 👋
         </h1>
@@ -58,7 +58,7 @@ export default function StudentHomePage() {
       {/* Subject grid */}
       <div>
         <h2 className="mb-4 text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-          <BookOpen className="h-7 w-7 text-orange-500" />
+          <BookOpen className="h-7 w-7 text-amber-600" />
           Mes matieres
         </h2>
 

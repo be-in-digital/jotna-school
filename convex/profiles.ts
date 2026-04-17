@@ -1,5 +1,7 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { createAccount, getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -8,16 +10,78 @@ import { v } from "convex/values";
 /**
  * Get the current user's profile using Convex Auth identity.
  * Returns null if no user is signed in or no profile exists yet.
+ * Includes the user's email from the `users` table for UI display.
  */
 export const getCurrentProfile = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    return await ctx.db
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+    const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
+    if (!profile) return null;
+    const user = await ctx.db.get(userId);
+    return {
+      ...profile,
+      email: user?.email ?? null,
+    };
+  },
+});
+
+/**
+ * Get students linked to the current signed-in teacher via studentGuardians
+ * with relation === "professeur". Returns [] if not a teacher or unauthenticated.
+ */
+export const getTeacherStudents = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return [];
+    if (profile.role !== "professeur" && profile.role !== "admin") return [];
+
+    const links = await ctx.db
+      .query("studentGuardians")
+      .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
+      .collect();
+
+    const teacherLinks = links.filter((l) => l.relation === "professeur");
+
+    const students = await Promise.all(
+      teacherLinks.map(async (link) => {
+        const student = await ctx.db.get(link.studentId);
+        if (!student) return null;
+
+        // Count completed topics and exercises
+        const progress = await ctx.db
+          .query("studentTopicProgress")
+          .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+          .collect();
+
+        const completedTopics = progress.filter(
+          (p) => p.completedAt != null,
+        ).length;
+        const completedExercises = progress.reduce(
+          (s, p) => s + p.completedExercises,
+          0,
+        );
+
+        return {
+          ...student,
+          completedTopics,
+          completedExercises,
+        };
+      }),
+    );
+
+    return students.filter((s): s is NonNullable<typeof s> => s !== null);
   },
 });
 
@@ -94,6 +158,98 @@ export const updateProfile = mutation({
     }
 
     await ctx.db.patch(id, updates);
+  },
+});
+
+/**
+ * Create a child account from the parent's session, without altering that session.
+ *
+ * Uses Convex Auth's `createAccount` helper to create the child's auth
+ * account server-side — this does NOT sign the parent out. The
+ * `createOrUpdateUser` callback in convex/auth.ts auto-creates the child's
+ * profile row (role=student). We then insert the studentGuardians link.
+ */
+export const createChildAccount = action({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ childUserId: string }> => {
+    const parentUserId = await getAuthUserId(ctx);
+    if (!parentUserId) {
+      throw new Error("Non authentifié");
+    }
+
+    if (args.password.length < 6) {
+      throw new Error("Le mot de passe doit contenir au moins 6 caractères.");
+    }
+
+    const { user } = await createAccount(ctx, {
+      provider: "password",
+      account: {
+        id: args.email,
+        secret: args.password,
+      },
+      profile: {
+        email: args.email,
+        name: args.name,
+        role: "student",
+      } as unknown as Parameters<typeof createAccount>[1]["profile"],
+    });
+
+    await ctx.runMutation(internal.profiles.linkChildToParent, {
+      childUserId: user._id,
+      parentUserId,
+    });
+
+    return { childUserId: user._id };
+  },
+});
+
+/**
+ * Internal: link an existing child profile to a parent profile.
+ * Called from the `createChildAccount` action after `createAccount` has
+ * created both user rows and the child's profile row.
+ */
+export const linkChildToParent = internalMutation({
+  args: {
+    childUserId: v.id("users"),
+    parentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const childProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.childUserId))
+      .unique();
+    if (!childProfile) {
+      throw new Error("Profil enfant introuvable");
+    }
+
+    const parentProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.parentUserId))
+      .unique();
+    if (!parentProfile) {
+      throw new Error("Profil parent introuvable");
+    }
+
+    const existing = await ctx.db
+      .query("studentGuardians")
+      .withIndex("by_guardianId", (q) => q.eq("guardianId", parentProfile._id))
+      .collect();
+    if (existing.some((l) => l.studentId === childProfile._id)) {
+      return;
+    }
+
+    await ctx.db.insert("studentGuardians", {
+      studentId: childProfile._id,
+      guardianId: parentProfile._id,
+      relation: "parent",
+    });
   },
 });
 

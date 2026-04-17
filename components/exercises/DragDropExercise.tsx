@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, X } from "lucide-react";
+import ExercisePrompt from "./ExercisePrompt";
 import {
   DndContext,
   DragOverlay,
@@ -151,9 +152,7 @@ export default function DragDropExercise({
 
   return (
     <div className="space-y-6">
-      <p className="text-xl font-bold text-gray-900 leading-relaxed">
-        {prompt}
-      </p>
+      <ExercisePrompt prompt={prompt} />
 
       {isCorrect === true && (
         <div className="flex items-center gap-2 rounded-2xl bg-green-100 border-2 border-green-300 px-4 py-3 text-green-800 font-semibold">

@@ -1,0 +1,20 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - link "Jotna School" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e9]: Jotna School
+    - paragraph [ref=e10]: Apprends en t'amusant
+  - generic [ref=e12]:
+    - heading "Se connecter" [level=1] [ref=e13]
+    - generic [ref=e14]:
+      - generic [ref=e15]: Email
+      - textbox [ref=e16]: testparent+17@example.com
+    - generic [ref=e17]:
+      - generic [ref=e18]: Mot de passe
+      - textbox [ref=e19]: azerty123
+    - button "Se connecter" [ref=e20]
+    - paragraph [ref=e21]:
+      - text: Pas de compte ?
+      - link "Créer un compte" [ref=e22] [cursor=pointer]:
+        - /url: /register

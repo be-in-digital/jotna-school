@@ -1,0 +1,24 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - link "Jotna School" [ref=e15] [cursor=pointer]:
+        - /url: /
+        - img [ref=e16]
+        - generic [ref=e19]: Jotna School
+      - paragraph [ref=e20]: Apprends en t'amusant
+    - generic [ref=e22]:
+      - heading "Se connecter" [level=1] [ref=e23]
+      - generic [ref=e24]:
+        - generic [ref=e25]: Email
+        - textbox [ref=e26]
+      - generic [ref=e27]:
+        - generic [ref=e28]: Mot de passe
+        - textbox [ref=e29]
+      - button "Se connecter" [ref=e30]
+      - paragraph [ref=e31]:
+        - text: Pas de compte ?
+        - link "Créer un compte" [ref=e32] [cursor=pointer]:
+          - /url: /register

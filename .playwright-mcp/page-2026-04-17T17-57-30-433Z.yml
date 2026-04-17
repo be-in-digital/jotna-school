@@ -1,0 +1,92 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e28] [cursor=pointer]:
+    - img [ref=e29]
+  - alert [ref=e32]
+  - generic [ref=e68]:
+    - generic [ref=e71]:
+      - generic [ref=e73]:
+        - img [ref=e74]
+        - generic [ref=e77]: Jotna School
+        - generic [ref=e78]: Professeur
+      - list [ref=e82]:
+        - listitem [ref=e83]:
+          - link "Tableau de bord" [ref=e84] [cursor=pointer]:
+            - /url: /teacher/dashboard
+            - img [ref=e85]
+            - generic [ref=e90]: Tableau de bord
+        - listitem [ref=e91]:
+          - link "Mes exercices" [ref=e92] [cursor=pointer]:
+            - /url: /teacher/exercises
+            - img [ref=e93]
+            - generic [ref=e98]: Mes exercices
+        - listitem [ref=e99]:
+          - link "PDFs" [ref=e100] [cursor=pointer]:
+            - /url: /teacher/pdf-uploads
+            - img [ref=e101]
+            - generic [ref=e104]: PDFs
+        - listitem [ref=e105]:
+          - link "Mes élèves" [ref=e106] [cursor=pointer]:
+            - /url: /teacher/students
+            - img [ref=e107]
+            - generic [ref=e112]: Mes élèves
+        - listitem [ref=e113]:
+          - link "Rapports" [ref=e114] [cursor=pointer]:
+            - /url: /teacher/reports
+            - img [ref=e115]
+            - generic [ref=e118]: Rapports
+        - listitem [ref=e119]:
+          - link "Paramètres" [ref=e120] [cursor=pointer]:
+            - /url: /teacher/settings
+            - img [ref=e121]
+            - generic [ref=e124]: Paramètres
+      - generic [ref=e126]:
+        - img [ref=e127]
+        - generic [ref=e131]: Test Teacher
+    - main [ref=e132]:
+      - generic [ref=e133]:
+        - button "Toggle Sidebar" [ref=e134]:
+          - img
+          - generic [ref=e135]: Toggle Sidebar
+        - generic [ref=e136]: Espace professeur
+      - main [ref=e137]:
+        - generic [ref=e138]:
+          - generic [ref=e139]:
+            - heading "Bonjour, Test Teacher !" [level=1] [ref=e140]
+            - paragraph [ref=e141]: Gérez vos exercices, vos élèves et consultez leurs résultats.
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - img [ref=e145]
+                - text: Exercices publiés
+              - paragraph [ref=e150]: "0"
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - img [ref=e153]
+                - text: Mes élèves
+              - paragraph [ref=e158]: "0"
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - img [ref=e161]
+                - text: Rapports générés
+              - paragraph [ref=e164]: "0"
+            - generic [ref=e165]:
+              - generic [ref=e166]:
+                - img [ref=e167]
+                - text: PDFs importés
+              - paragraph [ref=e170]: "0"
+          - generic [ref=e171]:
+            - link "Ajouter un PDF" [ref=e172] [cursor=pointer]:
+              - /url: /teacher/pdf-uploads
+              - img [ref=e173]
+              - text: Ajouter un PDF
+            - link "Créer un exercice" [ref=e174] [cursor=pointer]:
+              - /url: /teacher/exercises
+              - img [ref=e175]
+              - text: Créer un exercice
+            - link "Voir mes élèves" [ref=e180] [cursor=pointer]:
+              - /url: /teacher/students
+              - img [ref=e181]
+              - text: Voir mes élèves
+          - generic [ref=e186]:
+            - heading "Activité récente" [level=2] [ref=e187]
+            - paragraph [ref=e189]: Aucune activité récente pour le moment.

@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "Jotna School" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: Jotna School
+      - paragraph [ref=e10]: Apprends en t'amusant
+    - generic [ref=e12]:
+      - heading "Se connecter" [level=1] [ref=e13]
+      - generic [ref=e33]: Email ou mot de passe incorrect
+      - generic [ref=e14]:
+        - generic [ref=e15]: Email
+        - textbox [ref=e16]
+      - generic [ref=e17]:
+        - generic [ref=e18]: Mot de passe
+        - textbox [ref=e19]
+      - button "Se connecter" [ref=e20]
+      - paragraph [ref=e21]:
+        - text: Pas de compte ?
+        - link "Créer un compte" [ref=e22] [cursor=pointer]:
+          - /url: /register
+  - generic [ref=e27] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e28]:
+      - img [ref=e29]
+    - generic [ref=e34]:
+      - button "Open issues overlay" [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]: "0"
+          - generic [ref=e38]: "1"
+        - generic [ref=e39]: Issue
+      - button "Collapse issues badge" [ref=e40]:
+        - img [ref=e41]
+  - alert [ref=e32]

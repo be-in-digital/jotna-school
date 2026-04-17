@@ -23,11 +23,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signIn("password", { email, password, name, role, flow: "signUp" });
-      const dest =
-        role === "student"
-          ? "/student/home"
-          : "/parent/dashboard";
-      router.push(dest);
+      router.replace("/post-auth");
     } catch {
       setError("Impossible de créer le compte. Vérifiez vos informations.");
     } finally {
@@ -52,7 +48,7 @@ export default function RegisterPage() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
@@ -63,7 +59,7 @@ export default function RegisterPage() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
@@ -75,7 +71,7 @@ export default function RegisterPage() {
           minLength={6}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
@@ -86,7 +82,7 @@ export default function RegisterPage() {
           onChange={(e) =>
             setRole(e.target.value as "parent" | "student" | "professeur")
           }
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
           <option value="parent">Parent / Tuteur</option>
           <option value="student">Élève</option>
@@ -97,14 +93,14 @@ export default function RegisterPage() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
       >
         {loading ? "Création..." : "Créer un compte"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
         Déjà un compte ?{" "}
-        <Link href="/login" className="text-indigo-600 hover:underline">
+        <Link href="/login" className="font-medium text-amber-700 hover:underline">
           Se connecter
         </Link>
       </p>

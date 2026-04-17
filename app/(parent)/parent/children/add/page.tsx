@@ -1,25 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 export default function AddChildPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { signIn } = useAuthActions();
 
-  const profile = useQuery(
-    api.profiles.getCurrentProfile,
-    user ? { userId: user.id } : "skip",
-  );
-
-  const createChildProfile = useMutation(api.profiles.createChildProfile);
+  const profile = useQuery(api.profiles.getCurrentProfile);
+  const createChildAccount = useAction(api.profiles.createChildAccount);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,25 +27,7 @@ export default function AddChildPage() {
     setLoading(true);
 
     try {
-      // 1. Register the child as a new user via auth
-      const result = await signIn("password", {
-        flow: "signUp",
-        email,
-        password,
-        name,
-        role: "student",
-      });
-
-      // The user was created by auth callback.
-      // Now we need to find the newly created user and link them.
-      // Since auth auto-signs-in the new user, we need to sign back in as parent.
-      // Instead, we'll use a server-side approach: the auth callback already created
-      // the profile. We just need to link the child to the parent.
-
-      // For now, redirect to dashboard — the link will be established
-      // via the createChildProfile mutation in a follow-up step.
-      // In practice, the guardian would link an existing student account.
-
+      await createChildAccount({ name, email, password });
       router.push("/parent/dashboard");
     } catch (err) {
       setError(
