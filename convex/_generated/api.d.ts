@@ -16,6 +16,7 @@ import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
 import type * as exercises from "../exercises.js";
 import type * as http from "../http.js";
+import type * as migrations from "../migrations.js";
 import type * as pdfUploads from "../pdfUploads.js";
 import type * as pdfUploadsExtract from "../pdfUploadsExtract.js";
 import type * as profiles from "../profiles.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   badges: typeof badges;
   exercises: typeof exercises;
   http: typeof http;
+  migrations: typeof migrations;
   pdfUploads: typeof pdfUploads;
   pdfUploadsExtract: typeof pdfUploadsExtract;
   profiles: typeof profiles;
