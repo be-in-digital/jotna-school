@@ -1,12 +1,14 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
+import { ResendOTPPasswordReset } from "./ResendOTPPasswordReset";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
       profile(params) {
+        const rawEmail = (params.email as string) ?? "";
         return {
-          email: (params.email as string) ?? "",
+          email: rawEmail.trim().toLowerCase(),
           name: (params.name as string) ?? "",
           // Pass role through so createOrUpdateUser can read it.
           // This field is NOT stored on the users table -- we strip it
@@ -19,6 +21,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           throw new Error("Le mot de passe doit contenir au moins 6 caractères.");
         }
       },
+      reset: ResendOTPPasswordReset,
     }),
   ],
   callbacks: {

@@ -130,6 +130,8 @@ export default defineSchema({
   // badges
   // Achievement definitions. A badge may be scoped to a specific subject.
   // condition is a machine-readable tag (e.g. "complete_topic", "streak_3").
+  // The catalog-related fields (catalogKey, conditionType, tiers, etc.) are
+  // optional and used by the seeded badge catalog system.
   // ---------------------------------------------------------------------------
   badges: defineTable({
     name: v.string(),
@@ -137,16 +139,31 @@ export default defineSchema({
     icon: v.string(),
     condition: v.string(),
     subjectId: v.optional(v.id("subjects")),
+    catalogKey: v.optional(v.string()),
+    category: v.optional(v.string()),
+    conditionType: v.optional(v.string()),
+    conditionParams: v.optional(v.any()),
+    order: v.optional(v.number()),
+    rarity: v.optional(v.string()),
+    source: v.optional(v.string()),
+    tierSystem: v.optional(v.string()),
+    tiers: v.optional(v.any()),
+    visibility: v.optional(v.string()),
+    xpReward: v.optional(v.number()),
   }),
 
   // ---------------------------------------------------------------------------
   // earnedBadges
   // Junction table recording when a student earned a specific badge.
+  // The tier/progress fields are optional and used by the catalog badge system.
   // ---------------------------------------------------------------------------
   earnedBadges: defineTable({
     badgeId: v.id("badges"),
     studentId: v.id("profiles"),
     earnedAt: v.number(), // Unix timestamp ms
+    currentTier: v.optional(v.number()),
+    lastTierUpAt: v.optional(v.number()),
+    progressValue: v.optional(v.number()),
   }).index("by_studentId", ["studentId"]),
 
   // ---------------------------------------------------------------------------
