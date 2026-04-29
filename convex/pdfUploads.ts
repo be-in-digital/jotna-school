@@ -7,6 +7,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -16,7 +17,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const uploads = await ctx.db.query("pdfUploads").order("desc").collect();
+    const uploads = await ctx.db.query("pdfUploads").order("desc").take(200);
 
     const results = await Promise.all(
       uploads.map(async (upload) => {
@@ -49,7 +50,7 @@ export const listByTeacher = query({
     if (!profile) return [];
     if (profile.role !== "professeur" && profile.role !== "admin") return [];
 
-    const uploads = await ctx.db.query("pdfUploads").order("desc").collect();
+    const uploads = await ctx.db.query("pdfUploads").order("desc").take(200);
     const mine = uploads.filter((u) => u.adminId === profile._id);
 
     const results = await Promise.all(
@@ -75,11 +76,12 @@ export const getById = query({
 
     const subject = await ctx.db.get(upload.subjectId);
 
-    // Count exercises generated from this upload
+    // Count exercises generated from this upload (no index on sourcePdfUploadId,
+    // bounded scan with take)
     const exercises = await ctx.db
       .query("exercises")
       .filter((q) => q.eq(q.field("sourcePdfUploadId"), id))
-      .collect();
+      .take(200);
 
     return {
       ...upload,
@@ -137,11 +139,11 @@ export const remove = mutation({
     const upload = await ctx.db.get(id);
     if (!upload) return;
 
-    // Delete associated exercises
+    // Delete associated exercises (bounded scan, no index on sourcePdfUploadId)
     const exercises = await ctx.db
       .query("exercises")
       .filter((q) => q.eq(q.field("sourcePdfUploadId"), id))
-      .collect();
+      .take(500);
 
     for (const exercise of exercises) {
       await ctx.db.delete(exercise._id);
@@ -149,7 +151,7 @@ export const remove = mutation({
 
     // Delete the storage file
     try {
-      await ctx.storage.delete(upload.storageId as any);
+      await ctx.storage.delete(upload.storageId as Id<"_storage">);
     } catch {
       // Storage file may already be deleted
     }
@@ -218,7 +220,7 @@ export const createDraftExercises = internalMutation({
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_subjectId", (q) => q.eq("subjectId", subjectId))
-      .collect();
+      .take(200);
 
     // Resolve a target topic in this order:
     // 1. If the IA suggested a topic name and one already exists (case-insensitive match) → reuse it

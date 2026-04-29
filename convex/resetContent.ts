@@ -15,7 +15,7 @@ export const wipeAll = mutation({
     const deletedCounts: Record<string, number> = {};
 
     const wipe = async (table: "pdfUploads" | "exercises" | "topics" | "attempts" | "studentTopicProgress" | "topicReports" | "earnedBadges") => {
-      const rows = await ctx.db.query(table).collect();
+      const rows = await ctx.db.query(table).take(500);
       for (const row of rows) {
         await ctx.db.delete(row._id);
       }

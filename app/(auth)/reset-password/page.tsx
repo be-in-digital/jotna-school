@@ -2,12 +2,11 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function ResetPasswordForm() {
   const { signIn } = useAuthActions();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const initialEmail = searchParams.get("email") ?? "";
 
@@ -39,7 +38,7 @@ function ResetPasswordForm() {
       formData.set("newPassword", newPassword);
       formData.set("flow", "reset-verification");
       await signIn("password", formData);
-      router.replace("/post-auth");
+      window.location.href = "/post-auth";
     } catch {
       setError("Code invalide ou expiré. Demandez un nouveau code.");
     } finally {

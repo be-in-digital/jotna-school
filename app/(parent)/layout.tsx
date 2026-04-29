@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Brand } from "@/components/landing/brand";
+import { KidSwitcher } from "@/components/parent/kid-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -111,6 +112,9 @@ export default function ParentLayout({
         <header className="flex h-16 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger />
           <div className="text-sm font-medium text-gray-500">Espace {roleLabel.toLowerCase()}</div>
+          <div className="ml-auto">
+            <KidSwitcher />
+          </div>
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </SidebarInset>

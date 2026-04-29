@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { Users, BookOpen, Trophy, ArrowRight, UserCircle } from "lucide-react";
+import { Users, BookOpen, Trophy, ArrowRight, UserCircle, LinkIcon, Plus } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export default function ParentDashboardPage() {
@@ -60,12 +60,20 @@ export default function ParentDashboardPage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Mes enfants</h2>
-          <Link
-            href="/parent/children/add"
-            className="text-sm font-medium text-teal-600 hover:text-teal-700"
-          >
-            + Ajouter un enfant
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/parent/children/link"
+              className="text-sm font-medium text-teal-600 hover:text-teal-700"
+            >
+              Lier un enfant existant
+            </Link>
+            <Link
+              href="/parent/children/add"
+              className="text-sm font-medium text-teal-600 hover:text-teal-700"
+            >
+              + Ajouter un enfant
+            </Link>
+          </div>
         </div>
 
         {!children || children.length === 0 ? (
@@ -74,12 +82,22 @@ export default function ParentDashboardPage() {
             <p className="mt-2 text-sm text-gray-500">
               Aucun enfant ajouté pour le moment.
             </p>
-            <Link
-              href="/parent/children/add"
-              className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-            >
-              Ajouter un enfant
-            </Link>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Link
+                href="/parent/children/link"
+                className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Lier un enfant existant
+              </Link>
+              <Link
+                href="/parent/children/add"
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+              >
+                <Plus className="h-4 w-4" />
+                Ajouter un enfant
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

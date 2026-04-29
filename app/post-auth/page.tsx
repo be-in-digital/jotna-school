@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { roleHomePath, type Role } from "@/lib/auth";
@@ -19,7 +18,6 @@ function LoadingScreen() {
 }
 
 export default function PostAuthPage() {
-  const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const profile = useQuery(
     api.profiles.getCurrentProfile,
@@ -30,14 +28,14 @@ export default function PostAuthPage() {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      router.replace("/login");
+      window.location.href = "/login";
       return;
     }
 
     if (profile === undefined) return;
 
-    router.replace(roleHomePath((profile?.role as Role) ?? null));
-  }, [isLoading, isAuthenticated, profile, router]);
+    window.location.href = roleHomePath((profile?.role as Role) ?? null);
+  }, [isLoading, isAuthenticated, profile]);
 
   return <LoadingScreen />;
 }

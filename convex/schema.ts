@@ -44,6 +44,9 @@ export default defineSchema({
     name: v.string(),
     avatar: v.optional(v.string()),
     preferences: v.optional(v.any()),
+    // Parental consent for AI data processing (Loi 2008-12, Sénégal)
+    aiDataConsentGranted: v.optional(v.boolean()),
+    aiDataConsentGrantedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   // ---------------------------------------------------------------------------
@@ -394,6 +397,27 @@ export default defineSchema({
   })
     .index("by_exercise", ["exerciseId"])
     .index("by_user", ["userId"]),
+
+  // ---------------------------------------------------------------------------
+  // linkRequests
+  // Parent→Student link requests awaiting student email confirmation.
+  // ---------------------------------------------------------------------------
+  linkRequests: defineTable({
+    parentId: v.id("profiles"),
+    studentId: v.id("profiles"),
+    token: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("rejected"),
+      v.literal("expired"),
+    ),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_parentId", ["parentId"])
+    .index("by_studentId", ["studentId"]),
 
   // ---------------------------------------------------------------------------
   // parentSettings

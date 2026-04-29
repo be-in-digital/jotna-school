@@ -26,20 +26,28 @@ export const getResumeIndex = query({
     const exercises = await ctx.db
       .query("exercises")
       .withIndex("by_topicId", (q) => q.eq("topicId", topicId))
-      .collect();
+      .take(50);
     const published = exercises
       .filter((e) => e.status === "published")
       .sort((a, b) => a.order - b.order);
     if (published.length === 0) return null;
 
-    const attempts = await ctx.db
-      .query("attempts")
-      .withIndex("by_studentId", (q) => q.eq("studentId", profile._id))
-      .collect();
-
+    // Only need to know which exercises have a correct attempt — collect IDs of
+    // published exercises, then query per-exercise via compound index.
     const correctByExercise = new Set<string>();
-    for (const a of attempts) {
-      if (a.isCorrect) correctByExercise.add(String(a.exerciseId));
+    for (const ex of published) {
+      const att = await ctx.db
+        .query("attempts")
+        .withIndex("by_studentId_exerciseId", (q) =>
+          q.eq("studentId", profile._id).eq("exerciseId", ex._id),
+        )
+        .take(100);
+      for (const a of att) {
+        if (a.isCorrect) {
+          correctByExercise.add(String(a.exerciseId));
+          break;
+        }
+      }
     }
 
     const firstIncomplete = published.findIndex(
@@ -92,7 +100,7 @@ export const getExerciseAndAttempts = internalQuery({
       .withIndex("by_studentId_exerciseId", (q) =>
         q.eq("studentId", studentId).eq("exerciseId", exerciseId),
       )
-      .collect();
+      .take(100);
 
     return {
       exercise: {
@@ -358,7 +366,7 @@ export const getAttemptsForExercise = query({
       .withIndex("by_studentId_exerciseId", (q) =>
         q.eq("studentId", args.studentId).eq("exerciseId", args.exerciseId),
       )
-      .collect();
+      .take(100);
   },
 });
 
@@ -382,13 +390,15 @@ export const listByTeacherStudents = query({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
-      .collect();
+      .take(200);
 
     const studentIds = links
       .filter((l) => l.relation === "professeur")
       .map((l) => l.studentId);
 
     if (studentIds.length === 0) return [];
+
+    const limit = args.limit ?? 20;
 
     const allAttempts: Array<{
       _id: string;
@@ -408,10 +418,12 @@ export const listByTeacherStudents = query({
     }> = [];
 
     for (const studentId of studentIds) {
+      // Only fetch recent attempts per student (desc order, take enough for the final limit)
       const attempts = await ctx.db
         .query("attempts")
         .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-        .collect();
+        .order("desc")
+        .take(limit);
 
       const student = await ctx.db.get(studentId);
 
@@ -434,7 +446,6 @@ export const listByTeacherStudents = query({
 
     allAttempts.sort((a, b) => b.submittedAt - a.submittedAt);
 
-    const limit = args.limit ?? 20;
     return allAttempts.slice(0, limit);
   },
 });

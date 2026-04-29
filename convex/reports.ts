@@ -4,6 +4,7 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -20,7 +21,7 @@ export const listByStudent = query({
       .withIndex("by_studentId_topicId", (q) =>
         q.eq("studentId", args.studentId),
       )
-      .collect();
+      .take(200);
 
     const enriched = await Promise.all(
       reports.map(async (report) => {
@@ -58,7 +59,7 @@ export const listByTeacher = query({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
-      .collect();
+      .take(200);
 
     const studentIds = links
       .filter((l) => l.relation === "professeur")
@@ -74,7 +75,7 @@ export const listByTeacher = query({
         .withIndex("by_studentId_topicId", (q) =>
           q.eq("studentId", studentId),
         )
-        .collect();
+        .take(200);
 
       for (const report of reports) {
         const topic = await ctx.db.get(report.topicId);
@@ -112,7 +113,7 @@ export const listByParent = query({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
-      .collect();
+      .take(200);
 
     const studentIds = links
       .filter((l) => l.relation === "parent" || l.relation === "tuteur")
@@ -128,7 +129,7 @@ export const listByParent = query({
         .withIndex("by_studentId_topicId", (q) =>
           q.eq("studentId", studentId),
         )
-        .collect();
+        .take(200);
 
       for (const report of reports) {
         const topic = await ctx.db.get(report.topicId);
@@ -201,23 +202,19 @@ export const getGuardians = internalQuery({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(50);
 
     const guardians = await Promise.all(
       links.map(async (link) => {
         const profile = await ctx.db.get(link.guardianId);
         if (!profile) return null;
 
-        // profile.userId is the _id of the users table (stored as string)
-        // Look up the user to get their email
-        const users = await ctx.db.query("users").collect();
-        const user = users.find(
-          (u) => (u._id as unknown as string) === profile.userId,
-        );
+        // profile.userId is the _id of the users table — use ctx.db.get directly
+        const user = await ctx.db.get(profile.userId as Id<"users">);
 
         return {
           ...profile,
-          email: (user?.email as string | undefined) ?? null,
+          email: ((user as { email?: string } | null)?.email) ?? null,
         };
       }),
     );
@@ -247,7 +244,7 @@ export const generate = internalMutation({
     const exercises = await ctx.db
       .query("exercises")
       .withIndex("by_topicId", (q) => q.eq("topicId", args.topicId))
-      .collect();
+      .take(50);
 
     if (exercises.length === 0) {
       throw new Error("Aucun exercice trouvé pour cette thématique");
@@ -264,7 +261,7 @@ export const generate = internalMutation({
         .withIndex("by_studentId_exerciseId", (q) =>
           q.eq("studentId", args.studentId).eq("exerciseId", exercise._id),
         )
-        .collect();
+        .take(100);
 
       if (attempts.length === 0) continue;
 

@@ -59,7 +59,7 @@ export const seedMvp1 = mutation({
   args: {},
   handler: async (ctx) => {
     // 1. Subject Mathématiques
-    let subjects = await ctx.db.query("subjects").collect();
+    const subjects = await ctx.db.query("subjects").collect();
     let mathsId: Id<"subjects">;
     const existingMaths = subjects.find(
       (s) => s.name.toLowerCase().includes("math"),

@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export const listAll = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("topics").collect();
+    return await ctx.db.query("topics").take(200);
   },
 });
 
@@ -14,7 +14,7 @@ export const listBySubject = query({
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_subjectId", (q) => q.eq("subjectId", args.subjectId))
-      .collect();
+      .take(200);
     return topics.sort((a, b) => a.order - b.order);
   },
 });
@@ -104,14 +104,14 @@ export const removeWithExercises = mutation({
     const exercises = await ctx.db
       .query("exercises")
       .withIndex("by_topicId", (q) => q.eq("topicId", id))
-      .collect();
+      .take(500);
 
     // 2. Attempts on those exercises
+    // No index by exerciseId alone, so scan bounded batches per exercise.
     for (const ex of exercises) {
-      // Collect all attempts for this exercise across all students
       const attempts = await ctx.db
         .query("attempts")
-        .collect();
+        .take(500);
       for (const a of attempts) {
         if (a.exerciseId === ex._id) await ctx.db.delete(a._id);
       }
@@ -119,13 +119,17 @@ export const removeWithExercises = mutation({
     }
 
     // 3. Student progress for this topic
-    const progressRows = await ctx.db.query("studentTopicProgress").collect();
+    const progressRows = await ctx.db
+      .query("studentTopicProgress")
+      .take(500);
     for (const p of progressRows) {
       if (p.topicId === id) await ctx.db.delete(p._id);
     }
 
     // 4. Topic reports
-    const reports = await ctx.db.query("topicReports").collect();
+    const reports = await ctx.db
+      .query("topicReports")
+      .take(500);
     for (const r of reports) {
       if (r.topicId === id) await ctx.db.delete(r._id);
     }

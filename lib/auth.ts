@@ -78,6 +78,23 @@ export async function logout(signOut: SignOut): Promise<void> {
   return signOut();
 }
 
+// ── Clear cached tokens ────────────────────────────────────────────────────
+
+/**
+ * Remove all Convex Auth tokens from localStorage.
+ * Call this on logout so the next sign-in starts clean — prevents the
+ * ConvexReactClient from re-using a stale JWT from the previous session.
+ */
+export function clearConvexAuthTokens(): void {
+  if (typeof window === "undefined") return;
+  const keys = Object.keys(localStorage);
+  for (const key of keys) {
+    if (key.startsWith("__convexAuth")) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
 // ── Role-based home path ────────────────────────────────────────────────────
 
 export type Role = "admin" | "parent" | "student" | "professeur";

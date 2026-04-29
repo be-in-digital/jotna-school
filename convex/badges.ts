@@ -8,7 +8,7 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("badges").collect();
+    return await ctx.db.query("badges").take(100);
   },
 });
 
@@ -25,7 +25,7 @@ export const listEarnedByStudent = query({
     const earned = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(100);
 
     // Join with badges table for full info
     const results = [];
@@ -125,20 +125,20 @@ export const checkAndAward = internalMutation({
     const { studentId } = args;
 
     // Get all badge definitions
-    const allBadges = await ctx.db.query("badges").collect();
+    const allBadges = await ctx.db.query("badges").take(100);
 
     // Get all already-earned badges for this student
     const alreadyEarned = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-      .collect();
+      .take(100);
     const earnedBadgeIds = new Set(alreadyEarned.map((eb) => eb.badgeId));
 
     // Get student's topic progress
     const allProgress = await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-      .collect();
+      .take(200);
 
     const newlyAwarded: Array<{
       badgeId: string;
@@ -164,7 +164,7 @@ export const checkAndAward = internalMutation({
               .withIndex("by_subjectId", (q) =>
                 q.eq("subjectId", badge.subjectId!),
               )
-              .collect();
+              .take(200);
             const topicIds = new Set(topicsInSubject.map((t) => t._id));
             deserved = completed.some((p) => topicIds.has(p.topicId));
           } else {
@@ -187,7 +187,7 @@ export const checkAndAward = internalMutation({
               .withIndex("by_subjectId", (q) =>
                 q.eq("subjectId", badge.subjectId!),
               )
-              .collect();
+              .take(200);
             const topicIds = new Set(topicsInSubject.map((t) => t._id));
             deserved = perfectTopics.some((p) => topicIds.has(p.topicId));
           } else {

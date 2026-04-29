@@ -12,18 +12,19 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import type { DatabaseReader } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 
-const SINGLETON: "settings" = "settings";
+const SINGLETON = "settings" as const;
 
 async function loadAdminProfile(
-  ctx: { db: { query: any } },
+  ctx: { db: DatabaseReader },
   userIdRaw: string,
 ): Promise<Doc<"profiles"> | null> {
   const profile = await ctx.db
     .query("profiles")
-    .withIndex("by_userId", (q: any) => q.eq("userId", userIdRaw))
+    .withIndex("by_userId", (q) => q.eq("userId", userIdRaw))
     .unique();
   if (!profile) return null;
   if (profile.role !== "admin") return null;
@@ -121,7 +122,7 @@ export const getMonthSpendSummary = query({
     const rows = await ctx.db
       .query("aiUsage")
       .withIndex("by_month", (q) => q.eq("month", month))
-      .collect();
+      .take(1000);
 
     let total = 0;
     let calls = 0;

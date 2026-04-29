@@ -9,7 +9,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const listStudents = query({
   args: {},
   handler: async (ctx) => {
-    const profiles = await ctx.db.query("profiles").collect();
+    const profiles = await ctx.db.query("profiles").take(1000);
     const students = profiles.filter((p) => p.role === "student");
 
     const results = [];
@@ -18,14 +18,14 @@ export const listStudents = query({
       const progress = await ctx.db
         .query("studentTopicProgress")
         .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
-        .collect();
+        .take(200);
       const completedTopics = progress.filter((p) => p.completedAt != null).length;
 
       // Count badges
       const earnedBadges = await ctx.db
         .query("earnedBadges")
         .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
-        .collect();
+        .take(100);
 
       results.push({
         ...student,
@@ -50,7 +50,7 @@ export const getStudentDetail = query({
     const progress = await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(200);
 
     // Get subject progress with topic info
     const subjectProgress: Record<
@@ -77,7 +77,7 @@ export const getStudentDetail = query({
         const allTopics = await ctx.db
           .query("topics")
           .withIndex("by_subjectId", (q) => q.eq("subjectId", subject._id))
-          .collect();
+          .take(200);
 
         subjectProgress[subject._id] = {
           subjectId: subject._id,
@@ -101,7 +101,7 @@ export const getStudentDetail = query({
     const earnedBadges = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(100);
 
     const badgesWithInfo = [];
     for (const eb of earnedBadges) {
@@ -111,15 +111,12 @@ export const getStudentDetail = query({
       }
     }
 
-    // Get recent attempts (last 10)
-    const allAttempts = await ctx.db
+    // Get recent attempts (last 10) — use desc order + take to avoid loading all
+    const sortedAttempts = await ctx.db
       .query("attempts")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
-
-    const sortedAttempts = allAttempts
-      .sort((a, b) => b.submittedAt - a.submittedAt)
-      .slice(0, 10);
+      .order("desc")
+      .take(10);
 
     const attemptsWithInfo = [];
     for (const attempt of sortedAttempts) {
@@ -167,7 +164,7 @@ export const getMyStats = query({
     const progress = await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-      .collect();
+      .take(200);
     const completedTopics = progress.filter((p) => p.completedAt != null).length;
     const totalExercises = progress.reduce(
       (s, p) => s + p.completedExercises,
@@ -177,7 +174,7 @@ export const getMyStats = query({
     const earnedBadges = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-      .collect();
+      .take(100);
     const badgesWithInfo = [];
     for (const eb of earnedBadges) {
       const badge = await ctx.db.get(eb.badgeId);
@@ -187,7 +184,7 @@ export const getMyStats = query({
     const attempts = await ctx.db
       .query("attempts")
       .withIndex("by_studentId", (q) => q.eq("studentId", studentId))
-      .collect();
+      .take(1000);
     const totalTimeMs = attempts.reduce((s, a) => s + a.timeSpentMs, 0);
 
     const subjectCounts: Record<string, { name: string; count: number }> = {};
@@ -236,7 +233,7 @@ export const getMyEarnedBadges = query({
     const earned = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", profile._id))
-      .collect();
+      .take(100);
     return earned.map((e) => ({
       _id: e._id,
       badgeId: e.badgeId as string,
@@ -257,7 +254,7 @@ export const getStudentStats = query({
     const progress = await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(200);
 
     const completedTopics = progress.filter((p) => p.completedAt != null).length;
     const totalExercises = progress.reduce((s, p) => s + p.completedExercises, 0);
@@ -266,7 +263,7 @@ export const getStudentStats = query({
     const earnedBadges = await ctx.db
       .query("earnedBadges")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(100);
 
     const badgesWithInfo = [];
     for (const eb of earnedBadges) {
@@ -280,7 +277,7 @@ export const getStudentStats = query({
     const attempts = await ctx.db
       .query("attempts")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(1000);
 
     const totalTimeMs = attempts.reduce((s, a) => s + a.timeSpentMs, 0);
 

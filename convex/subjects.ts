@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const subjects = await ctx.db.query("subjects").collect();
+    const subjects = await ctx.db.query("subjects").take(50);
     return subjects.sort((a, b) => a.order - b.order);
   },
 });
@@ -78,7 +78,7 @@ export const seedDefaults = mutation({
       { name: "EMC", icon: "Users", color: "#6b7280", order: 8 },
     ];
 
-    const existing = await ctx.db.query("subjects").collect();
+    const existing = await ctx.db.query("subjects").take(50);
     const existingNames = new Set(existing.map((s) => s.name));
 
     const created: string[] = [];

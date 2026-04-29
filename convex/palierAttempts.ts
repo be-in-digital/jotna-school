@@ -110,7 +110,7 @@ export const verifyAttempt = mutation({
       .withIndex("by_palierAttempt_exercise", (q) =>
         q.eq("palierAttemptId", args.palierAttemptId).eq("exerciseId", args.exerciseId),
       )
-      .collect();
+      .take(100);
 
     const attemptNumber = previous.length + 1;
     const hintsUsedCount = previous.reduce((acc, a) => acc + a.hintsUsedCount, 0);
@@ -209,14 +209,14 @@ export const submitPalier = mutation({
       .withIndex("by_palierAttemptId", (q) =>
         q.eq("palierAttemptId", args.palierAttemptId),
       )
-      .collect();
+      .take(50);
     const variationOriginalIds = new Set(
       exosByAttempt.map((e) => e.originalExerciseId).filter(Boolean) as Id<"exercises">[],
     );
     const exosByPalier = await ctx.db
       .query("exercises")
       .withIndex("by_palierId", (q) => q.eq("palierId", palierAttempt.palierId))
-      .collect();
+      .take(50);
     const finalExos: Doc<"exercises">[] = [];
     for (const ex of exosByPalier) {
       if (!variationOriginalIds.has(ex._id)) finalExos.push(ex);
@@ -239,7 +239,7 @@ export const submitPalier = mutation({
             .eq("palierAttemptId", args.palierAttemptId)
             .eq("exerciseId", ex._id),
         )
-        .collect();
+        .take(100);
       const realAttempts = attempts.filter((a) => a.attemptNumber > 0);
       const totalHints = attempts.reduce((acc, a) => acc + a.hintsUsedCount, 0);
       const { score } = scoreExerciseFromAttempts(

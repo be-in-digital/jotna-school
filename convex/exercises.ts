@@ -17,7 +17,7 @@ export const listByTopic = query({
     const exercises = await ctx.db
       .query("exercises")
       .withIndex("by_topicId", (q) => q.eq("topicId", args.topicId))
-      .collect();
+      .take(50);
 
     const statusFilter = args.status ?? "all";
 
@@ -33,7 +33,7 @@ export const listByTopic = query({
 export const listAllDrafts = query({
   args: {},
   handler: async (ctx) => {
-    const exercises = await ctx.db.query("exercises").collect();
+    const exercises = await ctx.db.query("exercises").take(1000);
     return exercises.filter((e) => e.status === "draft");
   },
 });
@@ -41,7 +41,7 @@ export const listAllDrafts = query({
 export const listAllPublished = query({
   args: {},
   handler: async (ctx) => {
-    const exercises = await ctx.db.query("exercises").collect();
+    const exercises = await ctx.db.query("exercises").take(1000);
     return exercises.filter((e) => e.status === "published");
   },
 });
@@ -71,7 +71,7 @@ export const listByTeacher = query({
     if (!profile) return [];
     if (profile.role !== "professeur" && profile.role !== "admin") return [];
 
-    const all = await ctx.db.query("exercises").collect();
+    const all = await ctx.db.query("exercises").take(1000);
     const mine = all.filter((e) => e.reviewedBy === profile._id);
 
     // Enrich with topic + subject names
@@ -206,7 +206,7 @@ export const unpublish = mutation({
 export const publishAllFromUpload = mutation({
   args: { uploadId: v.id("pdfUploads") },
   handler: async (ctx, { uploadId }) => {
-    const allExercises = await ctx.db.query("exercises").collect();
+    const allExercises = await ctx.db.query("exercises").take(1000);
     const relevant = allExercises.filter(
       (ex) => ex.sourcePdfUploadId === uploadId && ex.status === "draft",
     );

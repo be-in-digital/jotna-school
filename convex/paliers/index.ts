@@ -103,7 +103,7 @@ export const getExercisesForPalier = query({
       .withIndex("by_palierAttemptId", (q) =>
         q.eq("palierAttemptId", args.palierAttemptId),
       )
-      .collect();
+      .take(50);
     const variationOriginalIds = new Set(
       exosByAttempt.map((e) => e.originalExerciseId).filter(Boolean) as Id<"exercises">[],
     );
@@ -114,7 +114,7 @@ export const getExercisesForPalier = query({
     const exosByPalier = await ctx.db
       .query("exercises")
       .withIndex("by_palierId", (q) => q.eq("palierId", attempt.palierId))
-      .collect();
+      .take(50);
 
     // Final list: original exos minus those that were variation-replaced,
     // plus variation exos.
@@ -674,6 +674,13 @@ export const regenerateFailedExercises = action({
     );
     const cumulative = history?.regenCount ?? 0;
     if (cumulative >= REGEN_HARD_CAP) {
+      await ctx.runMutation(internal.paliers.index.scheduleRegenNotification, {
+        studentId: attempt.userId,
+        palierId: attempt.palierId,
+        studentName: ctxData.studentName ?? "Votre enfant",
+        topicName: topic.name,
+        subjectName: subject.name,
+      });
       return {
         ok: false,
         reason: "REGEN_CAP_REACHED",
@@ -773,6 +780,7 @@ export const loadRegenContext = internalQuery({
     const topic = await ctx.db.get(palier.topicId);
     const subject = await ctx.db.get(palier.subjectId);
     if (!topic || !subject) return null;
+    const studentProfile = await ctx.db.get(attempt.userId);
 
     // Failed exos = palierAttempt.failedExerciseIds
     const failedIds = attempt.failedExerciseIds ?? [];
@@ -792,7 +800,7 @@ export const loadRegenContext = internalQuery({
         .withIndex("by_palierAttempt_exercise", (q) =>
           q.eq("palierAttemptId", args.palierAttemptId).eq("exerciseId", exoId),
         )
-        .collect();
+        .take(100);
       const last = attempts.sort((a, b) => b.submittedAt - a.submittedAt)[0];
       failed.push({
         exerciseId: exoId,
@@ -812,6 +820,7 @@ export const loadRegenContext = internalQuery({
       palier: { _id: palier._id, class: palier.class },
       topic: { _id: topic._id, name: topic.name },
       subject: { _id: subject._id, name: subject.name },
+      studentName: studentProfile?.name ?? null,
       failed,
     };
   },
@@ -842,6 +851,78 @@ export const startPalierAttempt = mutation({
       status: "in_progress",
       regenCount: 0,
     });
+  },
+});
+
+// ===========================================================================
+// INTERNAL — Parent notification on regen cap (Decision 88/96)
+// ===========================================================================
+
+const TWENTY_FOUR_H = 24 * 60 * 60 * 1000;
+
+export const scheduleRegenNotification = internalMutation({
+  args: {
+    studentId: v.id("profiles"),
+    palierId: v.id("paliers"),
+    studentName: v.string(),
+    topicName: v.string(),
+    subjectName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const history = await ctx.db
+      .query("palierAttemptHistory")
+      .withIndex("by_user_palier", (q) =>
+        q.eq("userId", args.studentId).eq("palierId", args.palierId),
+      )
+      .unique();
+
+    if (
+      history?.parentNotifiedAt &&
+      Date.now() - history.parentNotifiedAt < TWENTY_FOUR_H
+    ) {
+      return;
+    }
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.regenNotificationEmail.sendRegenCapEmail,
+      {
+        studentId: args.studentId,
+        studentName: args.studentName,
+        topicName: args.topicName,
+        subjectName: args.subjectName,
+      },
+    );
+  },
+});
+
+export const markParentNotified = internalMutation({
+  args: { studentId: v.id("profiles") },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("palierAttemptHistory")
+      .withIndex("by_user_palier", (q) => q.eq("userId", args.studentId))
+      .take(50);
+    for (const row of rows) {
+      if (!row.parentNotifiedAt || Date.now() - row.parentNotifiedAt > TWENTY_FOUR_H) {
+        await ctx.db.patch(row._id, { parentNotifiedAt: Date.now() });
+      }
+    }
+  },
+});
+
+export const getParentNotifSetting = internalQuery({
+  args: {
+    parentId: v.id("profiles"),
+    kidId: v.id("profiles"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("parentSettings")
+      .withIndex("by_parent_kid", (q) =>
+        q.eq("parentId", args.parentId).eq("kidId", args.kidId),
+      )
+      .unique();
   },
 });
 

@@ -25,7 +25,7 @@ export const getMonthSpend = internalQuery({
       .withIndex("by_month_status", (q) =>
         q.eq("month", month).eq("status", "ok"),
       )
-      .collect();
+      .take(1000);
     let total = 0;
     for (const r of rows) total += r.costUsd;
     return total;

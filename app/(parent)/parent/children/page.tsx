@@ -10,6 +10,8 @@ import {
   ArrowRight,
   UserCircle,
   Plus,
+  LinkIcon,
+  Clock,
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -20,6 +22,8 @@ export default function ParentChildrenPage() {
     api.profiles.getChildren,
     profile ? { guardianId: profile._id } : "skip",
   );
+
+  const pendingRequests = useQuery(api.linkRequests.getPendingForParent);
 
   if (profile === undefined) {
     return (
@@ -47,14 +51,50 @@ export default function ParentChildrenPage() {
             Consultez les profils et la progression de chaque enfant.
           </p>
         </div>
-        <Link
-          href="/parent/children/add"
-          className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-        >
-          <Plus className="h-4 w-4" />
-          Ajouter un enfant
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/parent/children/link"
+            className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50"
+          >
+            <LinkIcon className="h-4 w-4" />
+            Lier un enfant existant
+          </Link>
+          <Link
+            href="/parent/children/add"
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter un enfant
+          </Link>
+        </div>
       </div>
+
+      {pendingRequests && pendingRequests.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-gray-700">
+            Demandes en attente
+          </h2>
+          {pendingRequests.map((req) => (
+            <div
+              key={req._id}
+              className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4"
+            >
+              <Clock className="h-5 w-5 shrink-0 text-amber-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  {req.studentName}
+                </p>
+                <p className="text-xs text-amber-600">
+                  En attente de confirmation par email
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                En attente
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {children === undefined ? (
         <div className="flex items-center justify-center py-12">
@@ -66,12 +106,21 @@ export default function ParentChildrenPage() {
           <p className="mt-2 text-sm text-gray-500">
             Aucun enfant ajouté pour le moment.
           </p>
-          <Link
-            href="/parent/children/add"
-            className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-          >
-            Ajouter un enfant
-          </Link>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Link
+              href="/parent/children/link"
+              className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50"
+            >
+              <LinkIcon className="h-4 w-4" />
+              Lier un enfant existant
+            </Link>
+            <Link
+              href="/parent/children/add"
+              className="inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+            >
+              Ajouter un enfant
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -50,7 +50,7 @@ export const getTeacherStudents = query({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", profile._id))
-      .collect();
+      .take(200);
 
     const teacherLinks = links.filter((l) => l.relation === "professeur");
 
@@ -63,7 +63,7 @@ export const getTeacherStudents = query({
         const progress = await ctx.db
           .query("studentTopicProgress")
           .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
-          .collect();
+          .take(200);
 
         const completedTopics = progress.filter(
           (p) => p.completedAt != null,
@@ -92,7 +92,7 @@ export const getChildren = query({
     const links = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", args.guardianId))
-      .collect();
+      .take(50);
 
     const children = await Promise.all(
       links.map(async (link) => {
@@ -240,7 +240,7 @@ export const linkChildToParent = internalMutation({
     const existing = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", parentProfile._id))
-      .collect();
+      .take(200);
     if (existing.some((l) => l.studentId === childProfile._id)) {
       return;
     }
@@ -279,7 +279,7 @@ export const linkChild = mutation({
     const existing = await ctx.db
       .query("studentGuardians")
       .withIndex("by_guardianId", (q) => q.eq("guardianId", args.guardianId))
-      .collect();
+      .take(200);
 
     const alreadyLinked = existing.find(
       (link) => link.studentId === args.studentId,

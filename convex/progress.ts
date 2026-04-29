@@ -13,7 +13,7 @@ export const getStudentProgress = query({
     return await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(200);
   },
 });
 
@@ -27,7 +27,7 @@ export const getSubjectProgress = query({
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_subjectId", (q) => q.eq("subjectId", args.subjectId))
-      .collect();
+      .take(200);
 
     const topicIds = new Set(topics.map((t) => t._id));
 
@@ -35,7 +35,7 @@ export const getSubjectProgress = query({
     const allProgress = await ctx.db
       .query("studentTopicProgress")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(200);
 
     // Filter to only include progress for topics in this subject
     const subjectProgress = allProgress.filter((p) => topicIds.has(p.topicId));

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Menu } from "@base-ui/react/menu";
 import { ChevronsUpDown, LogOut, Settings, UserCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { logout } from "@/lib/auth";
+import { logout, clearConvexAuthTokens } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type Variant = "sidebar" | "compact";
@@ -33,13 +32,13 @@ export function UserMenu({
   className,
   fallbackLabel = "Compte",
 }: UserMenuProps) {
-  const router = useRouter();
   const { signOut } = useAuthActions();
   const profile = useQuery(api.profiles.getCurrentProfile);
 
   async function handleLogout() {
     await logout(signOut);
-    router.push("/login");
+    clearConvexAuthTokens();
+    window.location.href = "/login";
   }
 
   const name = profile?.name ?? fallbackLabel;
