@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Link2 } from "lucide-react";
+import { AlertTriangle, Check, X, Link2 } from "lucide-react";
 import ExercisePrompt from "./ExercisePrompt";
 
 interface MatchPayload {
-  pairs: { left: string; right: string }[];
+  pairs?: { left: string; right: string }[];
 }
 
 interface MatchExerciseProps {
@@ -32,7 +32,11 @@ export default function MatchExercise({
   disabled,
   isCorrect,
 }: MatchExerciseProps) {
-  const { pairs } = payload;
+  // Defensive: a malformed exercise payload (missing or empty `pairs`) used
+  // to crash the whole session with `pairs.map of undefined`. Render a soft
+  // failure instead so the kid can skip ahead via the prompt action UI.
+  const pairs = Array.isArray(payload?.pairs) ? payload.pairs : [];
+  const malformed = pairs.length === 0;
 
   // Shuffle the right-side items once
   const [shuffledRight] = useState(() => {
@@ -83,6 +87,39 @@ export default function MatchExercise({
   const handleSubmit = () => {
     onSubmit(JSON.stringify(connectedPairs));
   };
+
+  if (malformed) {
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[MatchExercise] payload missing 'pairs'; rendering soft-fail. payload =",
+        payload,
+      );
+    }
+    return (
+      <div className="space-y-4">
+        <ExercisePrompt prompt={prompt} />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
+          <div>
+            <p className="font-bold text-amber-900">
+              Cet exercice est cassé, on te le saute.
+            </p>
+            <p className="mt-1 text-sm text-amber-700">
+              Continue avec le suivant en validant.
+            </p>
+          </div>
+          <button
+            onClick={() => onSubmit("[]")}
+            disabled={disabled}
+            className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
