@@ -6,7 +6,6 @@ import {
   Star,
   Clock,
   Lightbulb,
-  Trophy,
   ArrowRight,
   RotateCcw,
   Flame,
@@ -18,6 +17,7 @@ import { motion } from "framer-motion";
 import { Pio } from "@/components/student/pio";
 import { SoundOptInDialog } from "@/components/student/sound-opt-in-dialog";
 import { LevelUpOverlay } from "@/components/student/level-up-overlay";
+import { BadgeShield } from "@/components/student/badge-icon";
 import {
   hasOptInBeenAsked,
   playBadge,
@@ -34,6 +34,8 @@ type UnseenBadge = {
     name: string;
     description: string;
     icon: string;
+    rarity: "common" | "rare" | "epic" | "legendary";
+    criteriaText: string;
   };
 };
 
@@ -324,20 +326,24 @@ export default function TopicCompletePage({
           transition={{ delay: 0.9, duration: 0.5, type: "spring", stiffness: 180 }}
           className="rounded-2xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-5 shadow-md"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-500 text-3xl shadow-md">
-              {snapshotBadges[0].badge.icon || (
-                <Trophy className="h-7 w-7 text-white" aria-hidden />
-              )}
+          <div className="flex items-center gap-4">
+            <div className="shrink-0">
+              <BadgeShield
+                iconName={snapshotBadges[0].badge.icon}
+                badgeName={snapshotBadges[0].badge.name}
+                tier={snapshotBadges[0].badge.rarity}
+                locked={false}
+                size={80}
+              />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-base font-bold text-purple-900">
+              <p className="font-display text-sm font-extrabold uppercase tracking-wider text-purple-700">
                 Nouveau badge !
               </p>
-              <p className="truncate text-sm font-semibold text-purple-800">
+              <p className="truncate font-display text-lg font-bold text-purple-900">
                 {snapshotBadges[0].badge.name}
               </p>
-              <p className="text-xs text-purple-600">
+              <p className="text-xs text-purple-700">
                 {snapshotBadges[0].badge.description}
               </p>
             </div>

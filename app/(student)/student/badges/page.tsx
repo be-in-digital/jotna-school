@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import {
   getRarityChipClass,
   getRarityLabel,
-  getRarityRingClass,
   type RarityTier,
 } from "@/lib/badges";
 import {
@@ -18,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BadgeShield } from "@/components/student/badge-icon";
 
 type Tab = "all" | "earned" | "locked";
 
@@ -122,7 +122,7 @@ export default function StudentBadgesPage() {
       </div>
 
       {visibleBadges.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
+        <div className="rounded-3xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-12 text-center">
           <p className="text-gray-500">
             {tab === "earned"
               ? "Aucun badge obtenu pour l'instant. Continue tes exercices !"
@@ -132,10 +132,9 @@ export default function StudentBadgesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {visibleBadges.map((badge) => {
             const isEarned = earnedBadgeIds.has(badge._id);
-            const ringClass = isEarned ? getRarityRingClass(badge.rarity) : "";
             return (
               <motion.button
                 type="button"
@@ -146,23 +145,20 @@ export default function StudentBadgesPage() {
                     earnedAt: earnedAtById.get(badge._id) ?? null,
                   })
                 }
-                whileHover={{ scale: 1.04, y: -3 }}
-                transition={{ type: "spring", stiffness: 280, damping: 22 }}
-                className={`relative flex min-h-44 flex-col items-center rounded-2xl border-2 p-5 text-center shadow-sm transition-colors ${
-                  isEarned
-                    ? "border-yellow-300 bg-gradient-to-b from-yellow-50 to-orange-50 shadow-md"
-                    : "border-gray-200 bg-white hover:bg-gray-50"
-                } ${ringClass}`}
+                whileHover={{ scale: 1.04, y: -4 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                className="group relative flex min-h-48 flex-col items-center justify-between gap-3 overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 text-center shadow-[0_4px_16px_-6px_rgba(15,23,42,0.12)] transition-shadow hover:shadow-[0_8px_22px_-6px_rgba(15,23,42,0.18)] sm:p-5"
                 aria-label={
                   isEarned
                     ? `${badge.name} — obtenu`
                     : `${badge.name} — verrouillé`
                 }
               >
-                {/* D10 — rarity chip on earned, top-right */}
+                {/* Rarity chip on earned, top-right */}
                 {isEarned && badge.rarity !== "common" && (
                   <span
-                    className={`absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getRarityChipClass(
+                    className={`absolute right-2 top-2 z-20 inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${getRarityChipClass(
                       badge.rarity,
                     )}`}
                   >
@@ -173,48 +169,38 @@ export default function StudentBadgesPage() {
                   </span>
                 )}
 
-                {/* Icon */}
-                <div
-                  className={`flex h-16 w-16 items-center justify-center rounded-2xl text-3xl ${
-                    isEarned ? "bg-yellow-100" : "bg-gray-200"
-                  }`}
-                >
-                  {isEarned ? (
-                    <span aria-hidden>{badge.icon}</span>
-                  ) : (
-                    /* D10b — silhouette + lock instead of "???" */
-                    <div className="relative flex items-center justify-center">
-                      <span
-                        className="opacity-25 grayscale"
-                        aria-hidden
-                      >
-                        {badge.icon}
-                      </span>
-                      <Lock
-                        className="absolute h-5 w-5 text-gray-400"
-                        aria-hidden
-                      />
-                    </div>
-                  )}
+                {/* SVG shield with palette + padlock or icon */}
+                <div className="mt-1 transition-transform duration-200 group-hover:scale-[1.05]">
+                  <BadgeShield
+                    iconName={badge.icon}
+                    badgeName={badge.name}
+                    tier={badge.rarity}
+                    locked={!isEarned}
+                    size={92}
+                  />
                 </div>
 
-                {/* Name */}
-                <p
-                  className={`mt-3 text-sm font-semibold ${
-                    isEarned ? "text-gray-900" : "text-gray-500"
-                  }`}
-                >
-                  {badge.name}
-                </p>
-
-                {/* D10b — readable criteria (locked) OR description (earned) */}
-                <p
-                  className={`mt-1 text-xs ${
-                    isEarned ? "text-gray-500" : "text-gray-400"
-                  }`}
-                >
-                  {isEarned ? badge.description : badge.criteriaText}
-                </p>
+                <div className="flex flex-col gap-1">
+                  <p
+                    className={`font-display text-sm font-extrabold ${
+                      isEarned ? "text-gray-900" : "text-slate-700"
+                    }`}
+                  >
+                    {badge.name}
+                  </p>
+                  {/* Reference design: small "Verrouillé" chip with padlock,
+                      no description for locked. Earned shows description. */}
+                  {isEarned ? (
+                    <p className="text-[11px] leading-tight text-gray-500">
+                      {badge.description}
+                    </p>
+                  ) : (
+                    <span className="inline-flex items-center justify-center gap-1 self-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      <Lock className="h-2.5 w-2.5" aria-hidden />
+                      Verrouillé
+                    </span>
+                  )}
+                </div>
               </motion.button>
             );
           })}
@@ -232,22 +218,14 @@ export default function StudentBadgesPage() {
           {detailBadge && (
             <>
               <DialogHeader>
-                <div
-                  className={`mb-2 flex h-20 w-20 items-center justify-center rounded-3xl text-5xl ${
-                    earnedBadgeIds.has(detailBadge.badge._id)
-                      ? "bg-yellow-100"
-                      : "bg-gray-200"
-                  } ${
-                    earnedBadgeIds.has(detailBadge.badge._id)
-                      ? getRarityRingClass(detailBadge.badge.rarity)
-                      : ""
-                  }`}
-                >
-                  {earnedBadgeIds.has(detailBadge.badge._id) ? (
-                    <span aria-hidden>{detailBadge.badge.icon}</span>
-                  ) : (
-                    <Lock className="h-8 w-8 text-gray-400" aria-hidden />
-                  )}
+                <div className="mb-2">
+                  <BadgeShield
+                    iconName={detailBadge.badge.icon}
+                    badgeName={detailBadge.badge.name}
+                    tier={detailBadge.badge.rarity}
+                    locked={!earnedBadgeIds.has(detailBadge.badge._id)}
+                    size={140}
+                  />
                 </div>
                 <DialogTitle>{detailBadge.badge.name}</DialogTitle>
                 {detailBadge.badge.rarity !== "common" && (
@@ -269,7 +247,7 @@ export default function StudentBadgesPage() {
                 </DialogDescription>
               </DialogHeader>
               {detailBadge.earnedAt !== null && (
-                <p className="text-center text-xs font-semibold text-yellow-700">
+                <p className="text-center text-xs font-semibold text-amber-700">
                   Obtenu le{" "}
                   {new Date(detailBadge.earnedAt).toLocaleDateString("fr-FR")}
                 </p>

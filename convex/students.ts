@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { getConditionText, normalizeRarity } from "./badges";
 
 // ---------------------------------------------------------------------------
 // Star approximation helper.
@@ -249,7 +250,18 @@ export const getMyStats = query({
     const badgesWithInfo = [];
     for (const eb of earnedBadges) {
       const badge = await ctx.db.get(eb.badgeId);
-      if (badge) badgesWithInfo.push({ ...eb, badge });
+      if (badge) {
+        // D10 — normalize rarity at the read boundary so the client always
+        // receives the typed enum value.
+        badgesWithInfo.push({
+          ...eb,
+          badge: {
+            ...badge,
+            rarity: normalizeRarity(badge.rarity),
+            criteriaText: getConditionText(badge.condition),
+          },
+        });
+      }
     }
 
     const attempts = await ctx.db
