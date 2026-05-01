@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import ExercisePrompt from "./ExercisePrompt";
 import {
   DndContext,
@@ -16,14 +16,15 @@ import {
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 
 interface DragDropPayload {
-  zones: string[];
-  items: { text: string; correctZone: string }[];
+  zones?: string[];
+  items?: { text: string }[];
 }
 
 interface DragDropExerciseProps {
   prompt: string;
   payload: DragDropPayload;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
   disabled: boolean;
   isCorrect: boolean | null;
 }
@@ -103,10 +104,14 @@ export default function DragDropExercise({
   prompt,
   payload,
   onSubmit,
+  onSkip,
   disabled,
   isCorrect,
 }: DragDropExerciseProps) {
-  const { zones, items } = payload;
+  const zones = Array.isArray(payload?.zones) ? payload.zones.filter((z): z is string => typeof z === "string") : [];
+  const items = Array.isArray(payload?.items)
+    ? payload.items.filter((it): it is { text: string } => !!it && typeof it === "object" && typeof (it as Record<string, unknown>).text === "string")
+    : [];
 
   // Track which zone each item is in (null = unplaced)
   const [assignments, setAssignments] = useState<Record<string, string | null>>(
@@ -118,6 +123,20 @@ export default function DragDropExercise({
       return initial;
     },
   );
+
+  if (zones.length < 2 || items.length < 2) {
+    return (
+      <div className="space-y-4">
+        <ExercisePrompt prompt={prompt} />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
+          <p className="font-bold text-amber-900">Cet exercice est cassé, on te le saute.</p>
+          <p className="mt-1 text-sm text-amber-700">Pas de souci, ça ne te coûte rien.</p>
+          <button onClick={() => onSkip?.()} disabled={disabled} className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50">Suivant</button>
+        </div>
+      </div>
+    );
+  }
 
   const [activeId, setActiveId] = useState<string | null>(null);
 

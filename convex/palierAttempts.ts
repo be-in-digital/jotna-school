@@ -10,6 +10,7 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
@@ -81,6 +82,35 @@ function verifyShortAnswer(
 // ===========================================================================
 // MUTATIONS
 // ===========================================================================
+
+async function loadFinalExercisesForAttempt(
+  ctx: QueryCtx | MutationCtx,
+  palierAttempt: Doc<"palierAttempts">,
+): Promise<Doc<"exercises">[]> {
+  const exosByAttempt = await ctx.db
+    .query("exercises")
+    .withIndex("by_palierAttemptId", (q) =>
+      q.eq("palierAttemptId", palierAttempt._id),
+    )
+    .take(50);
+  const variationOriginalIds = new Set(
+    exosByAttempt
+      .map((e) => e.originalExerciseId)
+      .filter(Boolean) as Id<"exercises">[],
+  );
+  const exosByPalier = await ctx.db
+    .query("exercises")
+    .withIndex("by_palierId", (q) => q.eq("palierId", palierAttempt.palierId))
+    .take(50);
+
+  const finalExos: Doc<"exercises">[] = [];
+  for (const ex of exosByPalier) {
+    if (!variationOriginalIds.has(ex._id)) finalExos.push(ex);
+  }
+  for (const ex of exosByAttempt) finalExos.push(ex);
+  finalExos.sort((a, b) => a.order - b.order);
+  return finalExos;
+}
 
 export const verifyAttempt = mutation({
   args: {
@@ -317,6 +347,75 @@ export const getMyAttempt = query({
     const attempt = await ctx.db.get(args.palierAttemptId);
     if (!attempt || attempt.userId !== profile._id) return null;
     return attempt;
+  },
+});
+
+export const getProgressForPalierAttempt = query({
+  args: { palierAttemptId: v.id("palierAttempts") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile) return null;
+
+    const palierAttempt = await ctx.db.get(args.palierAttemptId);
+    if (!palierAttempt) return null;
+    if (palierAttempt.userId !== profile._id) return null;
+
+    const finalExos = await loadFinalExercisesForAttempt(ctx, palierAttempt);
+    if (finalExos.length === 0) {
+      return {
+        currentIndex: 0,
+        completedCount: 0,
+        totalCount: 0,
+        failedAttemptsThisExo: 0,
+        hintsUsedThisExo: 0,
+      };
+    }
+
+    let currentIndex = finalExos.length - 1;
+    let completedCount = 0;
+    const attemptsByExercise = new Map<string, Doc<"attempts">[]>();
+
+    for (let i = 0; i < finalExos.length; i++) {
+      const ex = finalExos[i];
+      const rows = await ctx.db
+        .query("attempts")
+        .withIndex("by_palierAttempt_exercise", (q) =>
+          q.eq("palierAttemptId", args.palierAttemptId).eq("exerciseId", ex._id),
+        )
+        .take(100);
+      attemptsByExercise.set(String(ex._id), rows);
+
+      const realAttempts = rows.filter((a) => a.attemptNumber > 0);
+      const isCompleted =
+        realAttempts.some((a) => a.isCorrect) || realAttempts.length >= 5;
+      if (isCompleted) {
+        completedCount += 1;
+        continue;
+      }
+      currentIndex = i;
+      break;
+    }
+
+    const currentExercise = finalExos[currentIndex];
+    const currentRows = attemptsByExercise.get(String(currentExercise._id)) ?? [];
+    const currentRealAttempts = currentRows.filter((a) => a.attemptNumber > 0);
+
+    return {
+      currentIndex,
+      completedCount,
+      totalCount: finalExos.length,
+      failedAttemptsThisExo: currentRealAttempts.filter((a) => !a.isCorrect)
+        .length,
+      hintsUsedThisExo: currentRows.reduce(
+        (acc, a) => acc + a.hintsUsedCount,
+        0,
+      ),
+    };
   },
 });
 

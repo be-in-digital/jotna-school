@@ -4,14 +4,26 @@ import { useState } from "react";
 import { AlertTriangle, Check, X, Link2 } from "lucide-react";
 import ExercisePrompt from "./ExercisePrompt";
 
+/**
+ * Server contract — the sanitized payload sent by `getExercisesForPalier`
+ * (see convex/paliers/index.ts → sanitizePayload case "match"):
+ *   { left:  string[]   // original order, kid pairs FROM these
+ *     right: string[] } // already shuffled deterministically server-side
+ *
+ * The submission expected by `verifyMatch` is
+ *   JSON.stringify([{ left, right }, …])
+ * matching the kid's connections.
+ */
 interface MatchPayload {
-  pairs?: { left: string; right: string }[];
+  left?: string[];
+  right?: string[];
 }
 
 interface MatchExerciseProps {
   prompt: string;
   payload: MatchPayload;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
   disabled: boolean;
   isCorrect: boolean | null;
 }
@@ -29,31 +41,21 @@ export default function MatchExercise({
   prompt,
   payload,
   onSubmit,
+  onSkip,
   disabled,
   isCorrect,
 }: MatchExerciseProps) {
-  // Defensive: a malformed exercise payload (missing or empty `pairs`) used
-  // to crash the whole session with `pairs.map of undefined`. Render a soft
-  // failure instead so the kid can skip ahead via the prompt action UI.
-  const pairs = Array.isArray(payload?.pairs) ? payload.pairs : [];
-  const malformed = pairs.length === 0;
-
-  // Shuffle the right-side items once
-  const [shuffledRight] = useState(() => {
-    const items = pairs.map((p) => p.right);
-    for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    return items;
-  });
+  const left = Array.isArray(payload?.left) ? payload.left : [];
+  const right = Array.isArray(payload?.right) ? payload.right : [];
+  const malformed = left.length === 0 || right.length !== left.length;
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
-  const [connectedPairs, setConnectedPairs] = useState<{ left: string; right: string }[]>([]);
+  const [connectedPairs, setConnectedPairs] = useState<
+    { left: string; right: string }[]
+  >([]);
 
   const handleLeftClick = (item: string) => {
     if (disabled) return;
-    // If already connected, remove it
     if (connectedPairs.some((p) => p.left === item)) {
       setConnectedPairs(connectedPairs.filter((p) => p.left !== item));
       return;
@@ -63,7 +65,6 @@ export default function MatchExercise({
 
   const handleRightClick = (item: string) => {
     if (disabled || !selectedLeft) return;
-    // If already connected to something else, remove that connection
     const filtered = connectedPairs.filter(
       (p) => p.left !== selectedLeft && p.right !== item,
     );
@@ -88,11 +89,13 @@ export default function MatchExercise({
     onSubmit(JSON.stringify(connectedPairs));
   };
 
+  // True soft-fail — should be vanishingly rare now that the contract is
+  // wired correctly. Keep the safety net for future schema drift.
   if (malformed) {
     if (typeof window !== "undefined") {
       // eslint-disable-next-line no-console
       console.error(
-        "[MatchExercise] payload missing 'pairs'; rendering soft-fail. payload =",
+        "[MatchExercise] payload missing or mismatched 'left'/'right'; soft-fail. payload =",
         payload,
       );
     }
@@ -106,11 +109,11 @@ export default function MatchExercise({
               Cet exercice est cassé, on te le saute.
             </p>
             <p className="mt-1 text-sm text-amber-700">
-              Continue avec le suivant en validant.
+              Pas de souci, ça ne te coûte rien.
             </p>
           </div>
           <button
-            onClick={() => onSubmit("[]")}
+            onClick={() => onSkip?.()}
             disabled={disabled}
             className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50"
           >
@@ -128,7 +131,7 @@ export default function MatchExercise({
       {isCorrect === true && (
         <div className="flex items-center gap-2 rounded-2xl bg-green-100 border-2 border-green-300 px-4 py-3 text-green-800 font-semibold">
           <Check className="h-5 w-5" />
-          Bravo, tout est bien relie !
+          Bravo, tout est bien relié !
         </div>
       )}
       {isCorrect === false && (
@@ -139,15 +142,15 @@ export default function MatchExercise({
       )}
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Left column */}
+        {/* Left column — original order */}
         <div className="space-y-3">
-          {pairs.map((pair) => {
-            const color = getLeftColor(pair.left);
-            const isActive = selectedLeft === pair.left;
+          {left.map((item) => {
+            const color = getLeftColor(item);
+            const isActive = selectedLeft === item;
             return (
               <button
-                key={pair.left}
-                onClick={() => handleLeftClick(pair.left)}
+                key={item}
+                onClick={() => handleLeftClick(item)}
                 disabled={disabled}
                 className={`
                   w-full rounded-2xl border-3 px-4 py-4 text-center text-lg font-bold transition-all duration-200
@@ -160,15 +163,15 @@ export default function MatchExercise({
                   ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}
                 `}
               >
-                {pair.left}
+                {item}
               </button>
             );
           })}
         </div>
 
-        {/* Right column */}
+        {/* Right column — server-shuffled */}
         <div className="space-y-3">
-          {shuffledRight.map((item) => {
+          {right.map((item) => {
             const color = getRightColor(item);
             return (
               <button
@@ -211,7 +214,7 @@ export default function MatchExercise({
 
       <button
         onClick={handleSubmit}
-        disabled={disabled || connectedPairs.length !== pairs.length}
+        disabled={disabled || connectedPairs.length !== left.length}
         className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         Valider

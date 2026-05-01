@@ -314,6 +314,7 @@ export default function ExercisePlayer({
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
+            onSkip={handleAdvance}
             disabled={exerciseDisabled}
             isCorrect={isCorrect}
           />
@@ -324,6 +325,7 @@ export default function ExercisePlayer({
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
+            onSkip={handleAdvance}
             disabled={exerciseDisabled}
             isCorrect={isCorrect}
           />
@@ -334,6 +336,7 @@ export default function ExercisePlayer({
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
+            onSkip={handleAdvance}
             disabled={exerciseDisabled}
             isCorrect={isCorrect}
           />
@@ -344,6 +347,7 @@ export default function ExercisePlayer({
             prompt={currentExercise.prompt}
             payload={currentExercise.payload as any}
             onSubmit={handleSubmit}
+            onSkip={handleAdvance}
             disabled={exerciseDisabled}
             isCorrect={isCorrect}
           />
