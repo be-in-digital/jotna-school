@@ -1,14 +1,66 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+import { readStudentPreferences, type StudentPreferences } from "./students";
+
+// ---------------------------------------------------------------------------
+// D10 — Rarity tier normalization. The schema currently widens
+// `badges.rarity` as `v.optional(v.string())` (legacy free-form). Phase B
+// narrows it to a strict enum via the widen-migrate-narrow pattern:
+//   1. (already done) Widen accepts any string.
+//   2. Run `internal.badges.normalizeRarities` once in production.
+//   3. Narrow the validator in schema.ts to the strict union below.
+// All read paths use `normalizeRarity()` so the UI always sees the typed value.
+// ---------------------------------------------------------------------------
+
+export const RARITY_TIERS = ["common", "rare", "epic", "legendary"] as const;
+export type RarityTier = (typeof RARITY_TIERS)[number];
+const RARITY_SET = new Set<string>(RARITY_TIERS);
+
+export function normalizeRarity(raw: string | undefined | null): RarityTier {
+  if (!raw) return "common";
+  const lower = raw.toLowerCase().trim();
+  if (RARITY_SET.has(lower)) return lower as RarityTier;
+  // Legacy aliases — observed in seeded data and admin UI shorthand.
+  if (lower === "uncommon" || lower === "bronze" || lower === "argent") {
+    return "rare";
+  }
+  if (lower === "or" || lower === "gold") return "epic";
+  if (lower === "diamond" || lower === "diamant" || lower === "platinum") {
+    return "legendary";
+  }
+  return "common";
+}
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
+// D10b — Map condition keys to readable French unlock criteria. Anything
+// outside this list falls back to the generic encouragement copy.
+export function getConditionText(condition: string): string {
+  switch (condition) {
+    case "complete_topic":
+      return "Termine une thématique";
+    case "perfect_score":
+      return "Termine une thématique sans erreur";
+    case "streak_3":
+      return "Termine 3 thématiques de suite";
+    default:
+      return "Continue à apprendre !";
+  }
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("badges").take(100);
+    const rows = await ctx.db.query("badges").take(100);
+    return rows.map((b) => ({
+      ...b,
+      rarity: normalizeRarity(b.rarity),
+      criteriaText: getConditionText(b.condition),
+    }));
   },
 });
 
@@ -34,7 +86,11 @@ export const listEarnedByStudent = query({
       if (badge) {
         results.push({
           ...eb,
-          badge,
+          badge: {
+            ...badge,
+            rarity: normalizeRarity(badge.rarity),
+            criteriaText: getConditionText(badge.condition),
+          },
         });
       }
     }
@@ -110,6 +166,77 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// D25 — Mark earned badges as "seen" by the kid (after the /complete page
+// renders the unlock card). Idempotent: re-calls with already-seen IDs are a
+// no-op (early return without a db.patch). Caps the rolling list at 100
+// entries (Guardian C4) — a student earning 100+ unique badges is far beyond
+// MVP scope, but the cap keeps preferences bounded.
+// ---------------------------------------------------------------------------
+
+const LAST_SEEN_BADGE_IDS_CAP = 100;
+
+export const markBadgesSeen = mutation({
+  args: { badgeIds: v.array(v.id("badges")) },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Non authentifié");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") {
+      throw new Error("Profil élève introuvable");
+    }
+    if (args.badgeIds.length === 0) return;
+
+    const prefs = readStudentPreferences(profile);
+    const current = prefs.lastSeenBadgeIds ?? [];
+    const incoming = args.badgeIds.map((id) => id as string);
+    const currentSet = new Set(current);
+    const additions = incoming.filter((id) => !currentSet.has(id));
+    if (additions.length === 0) return; // Idempotent — nothing new to record.
+
+    const merged = [...current, ...additions].slice(-LAST_SEEN_BADGE_IDS_CAP);
+    const next: StudentPreferences = { ...prefs, lastSeenBadgeIds: merged };
+    await ctx.db.patch(profile._id, { preferences: next });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// D10 step 2 — Migration: normalize all badges.rarity values to the strict
+// enum so the schema can be narrowed (step 3) without rejecting any rows.
+// Idempotent + paginated. Run once via `npx convex run badges:normalizeRarities`
+// before bumping schema.ts to the strict union validator.
+// ---------------------------------------------------------------------------
+export const normalizeRarities = internalMutation({
+  args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
+    patched: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("badges")
+      .paginate({ numItems: 100, cursor: args.cursor ?? null });
+
+    let patched = args.patched ?? 0;
+    for (const badge of result.page) {
+      const next = normalizeRarity(badge.rarity);
+      if (badge.rarity === next) continue; // No-op when already normalized.
+      await ctx.db.patch(badge._id, { rarity: next });
+      patched += 1;
+    }
+
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.badges.normalizeRarities, {
+        cursor: result.continueCursor,
+        patched,
+      });
+    }
+    return { patched, isDone: result.isDone };
   },
 });
 

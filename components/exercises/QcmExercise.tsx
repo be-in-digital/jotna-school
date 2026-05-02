@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import ExercisePrompt from "./ExercisePrompt";
 
 interface QcmPayload {
-  options: string[];
-  correctIndex: number;
+  options?: string[];
+  correctIndex?: number;
   explanation?: string;
 }
 
@@ -14,6 +14,7 @@ interface QcmExerciseProps {
   prompt: string;
   payload: QcmPayload;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
   disabled: boolean;
   isCorrect: boolean | null;
 }
@@ -31,11 +32,26 @@ export default function QcmExercise({
   prompt,
   payload,
   onSubmit,
+  onSkip,
   disabled,
   isCorrect,
 }: QcmExerciseProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const { options } = payload;
+  const options = Array.isArray(payload?.options) ? payload.options.filter((o): o is string => typeof o === "string") : [];
+
+  if (options.length < 2) {
+    return (
+      <div className="space-y-4">
+        <ExercisePrompt prompt={prompt} />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
+          <p className="font-bold text-amber-900">Cet exercice est cassé, on te le saute.</p>
+          <p className="mt-1 text-sm text-amber-700">Pas de souci, ça ne te coûte rien.</p>
+          <button onClick={() => onSkip?.()} disabled={disabled} className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50">Suivant</button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = () => {
     if (selectedIndex !== null) {

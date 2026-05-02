@@ -3,7 +3,9 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { Loader2, Star, Trophy, BookOpen } from "lucide-react";
+import { Loader2, BookOpen, Flame } from "lucide-react";
+import { motion } from "framer-motion";
+import { Pio } from "@/components/student/pio";
 
 const iconMap: Record<string, React.ReactNode> = {
   Calculator: <span className="text-3xl">🧮</span>,
@@ -18,8 +20,9 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export default function StudentHomePage() {
   const subjects = useQuery(api.subjects.list);
+  const stats = useQuery(api.students.getMyStats);
 
-  if (subjects === undefined) {
+  if (subjects === undefined || stats === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
@@ -28,44 +31,48 @@ export default function StudentHomePage() {
     );
   }
 
+  // D8 — true cold-start: brand new account, zero progress everywhere.
+  // We hide stats surfaces and show a single warm welcome + first-step CTA
+  // so the screen doesn't read as "you have nothing yet".
+  const isColdStart =
+    stats !== null &&
+    (stats.totalExercises ?? 0) === 0 &&
+    (stats.totalStars ?? 0) === 0 &&
+    (!stats.streaksEnabled || (stats.currentStreak ?? 0) === 0);
+
+  const firstName = (stats?.student.name ?? "").split(" ")[0] || "";
+  const showStreakRibbon =
+    stats?.streaksEnabled === true && (stats.currentStreak ?? 0) > 0;
+
   return (
     <div className="space-y-8">
-      {/* Welcome */}
-      <div className="rounded-3xl bg-gradient-to-r from-amber-400 via-orange-500 to-lime-600 p-6 text-white shadow-xl">
-        <h1 className="text-3xl font-extrabold">
-          Bonjour ! 👋
-        </h1>
-        <p className="mt-2 text-lg opacity-90">
-          Pret a apprendre en t&apos;amusant aujourd&apos;hui ?
-        </p>
-      </div>
+      {/* Welcome zone — Pio greets the student by name */}
+      <WelcomeBanner
+        firstName={firstName}
+        isColdStart={isColdStart}
+        currentStreak={stats?.currentStreak ?? 0}
+        streakActive={showStreakRibbon}
+      />
 
-      {/* Last badge placeholder */}
-      <div className="flex items-center gap-4 rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-200">
-          <Trophy className="h-6 w-6 text-amber-700" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-amber-800">
-            Dernier badge obtenu
-          </p>
-          <p className="text-base font-bold text-amber-900">
-            Continue tes exercices pour gagner des badges !
-          </p>
-        </div>
-      </div>
+      {/* D7 — 7-day streak ribbon (only when parent toggle is on AND there's a streak) */}
+      {showStreakRibbon && stats && (
+        <StreakRibbon
+          currentStreak={stats.currentStreak}
+          longestStreak={stats.longestStreak}
+        />
+      )}
 
-      {/* Subject grid */}
+      {/* Subjects grid — "mes mondes" */}
       <div>
-        <h2 className="mb-4 text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-          <BookOpen className="h-7 w-7 text-amber-600" />
-          Mes matieres
+        <h2 className="font-display mb-4 flex items-center gap-2 text-2xl font-extrabold text-gray-900">
+          <BookOpen className="h-7 w-7 text-amber-600" aria-hidden />
+          Mes matières
         </h2>
 
         {subjects.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
             <p className="text-lg font-medium text-gray-500">
-              Aucune matiere disponible pour le moment.
+              Aucune matière disponible pour le moment.
             </p>
           </div>
         ) : (
@@ -74,11 +81,8 @@ export default function StudentHomePage() {
               <Link
                 key={subject._id}
                 href={`/student/subjects/${subject._id}`}
-                className="group rounded-3xl border-3 border-gray-100 bg-white p-6 shadow-md transition-all duration-200 hover:shadow-xl hover:scale-[1.02] hover:border-transparent"
-                style={{
-                  borderColor: "transparent",
-                  boxShadow: `0 4px 20px ${subject.color}20`,
-                }}
+                className="group rounded-3xl border-2 border-transparent bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl focus-visible:scale-[1.02] focus-visible:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2"
+                style={{ boxShadow: `0 4px 20px ${subject.color}20` }}
               >
                 <div
                   className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg"
@@ -91,33 +95,174 @@ export default function StudentHomePage() {
                   )}
                 </div>
 
-                <h3 className="text-xl font-extrabold text-gray-900 group-hover:text-gray-700">
+                <h3 className="font-display text-xl font-extrabold text-gray-900 group-hover:text-gray-700">
                   {subject.name}
                 </h3>
-
-                {/* Progress bar placeholder */}
-                <div className="mt-3 space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-gray-500">
-                    <span>Progression</span>
-                    <span className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-amber-400" />
-                      0%
-                    </span>
-                  </div>
-                  <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: "0%",
-                        backgroundColor: subject.color,
-                      }}
-                    />
-                  </div>
-                </div>
+                <p className="mt-1 text-sm font-medium text-gray-500">
+                  Commence ton aventure
+                </p>
               </Link>
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WelcomeBanner({
+  firstName,
+  isColdStart,
+  currentStreak,
+  streakActive,
+}: {
+  firstName: string;
+  isColdStart: boolean;
+  currentStreak: number;
+  streakActive: boolean;
+}) {
+  const greeting = isColdStart
+    ? `Bienvenue${firstName ? `, ${firstName}` : ""} ! 👋`
+    : `Bon retour${firstName ? `, ${firstName}` : ""} !`;
+
+  const subline = isColdStart
+    ? "Choisis ta première matière pour commencer ton aventure."
+    : streakActive
+      ? `Bravo, tu as ${currentStreak} jour${currentStreak > 1 ? "s" : ""} de série.`
+      : "Prêt(e) à apprendre aujourd'hui ?";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 p-6 text-white shadow-xl sm:p-8"
+    >
+      <div className="flex items-center gap-4 sm:gap-6">
+        <Pio
+          state={isColdStart ? "hello" : streakActive ? "cheer" : "idle"}
+          size={88}
+          className="shrink-0 drop-shadow-lg"
+        />
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-2xl font-extrabold sm:text-3xl">
+            {greeting}
+          </h1>
+          <p className="mt-1.5 text-base opacity-95 sm:text-lg">{subline}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * D7 — 7-day visual streak ribbon. Shows the current calendar week (Mon → Sun)
+ * with each day in one of three states:
+ *   - active : within the running streak
+ *   - today  : today, highlighted regardless of activity (kid sees "where I am")
+ *   - empty  : outside the streak window
+ *
+ * D7c — zero-shame copy. Never says "perdu" — even broken streaks just fade.
+ */
+function StreakRibbon({
+  currentStreak,
+  longestStreak,
+}: {
+  currentStreak: number;
+  longestStreak: number;
+}) {
+  // Compute the current week (Monday-anchored) as 7 Date objects.
+  const today = new Date();
+  const todayDow = (today.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - todayDow);
+  monday.setHours(0, 0, 0, 0);
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+
+  // Determine which days are within the active streak (going back from today).
+  const streakStart = new Date(today);
+  streakStart.setDate(today.getDate() - (currentStreak - 1));
+  streakStart.setHours(0, 0, 0, 0);
+
+  const dayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+
+  return (
+    <div className="rounded-2xl border-2 border-orange-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Flame
+            className="h-5 w-5 fill-orange-500 text-orange-500"
+            aria-hidden
+          />
+          <span className="font-display text-lg font-bold text-gray-900">
+            {currentStreak} jour{currentStreak > 1 ? "s" : ""} de série
+          </span>
+        </div>
+        {longestStreak > currentStreak && (
+          <span className="text-xs font-medium text-gray-500">
+            record : {longestStreak}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+        {days.map((d, i) => {
+          const dDay = new Date(d);
+          dDay.setHours(0, 0, 0, 0);
+          const todayDay = new Date(today);
+          todayDay.setHours(0, 0, 0, 0);
+          const isToday = dDay.getTime() === todayDay.getTime();
+          const isActive =
+            dDay.getTime() >= streakStart.getTime() &&
+            dDay.getTime() <= todayDay.getTime();
+
+          return (
+            <div
+              key={i}
+              className="flex flex-1 flex-col items-center gap-1.5"
+              aria-label={
+                isActive
+                  ? `${dayLabels[i]} actif`
+                  : isToday
+                    ? `${dayLabels[i]} aujourd'hui`
+                    : `${dayLabels[i]} en pause`
+              }
+            >
+              <span
+                className={`text-xs font-semibold ${
+                  isToday ? "text-orange-700" : "text-gray-500"
+                }`}
+              >
+                {dayLabels[i]}
+              </span>
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors sm:h-10 sm:w-10 ${
+                  isActive
+                    ? "border-orange-300 bg-orange-100 text-orange-600"
+                    : isToday
+                      ? "border-orange-400 bg-white text-orange-400"
+                      : "border-gray-200 bg-gray-50 text-gray-300"
+                }`}
+              >
+                {isActive ? (
+                  <Flame
+                    className="h-4 w-4 fill-orange-500 text-orange-500"
+                    aria-hidden
+                  />
+                ) : isToday ? (
+                  <span className="text-base font-bold">·</span>
+                ) : (
+                  <span className="text-xs">·</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

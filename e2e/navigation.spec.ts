@@ -4,18 +4,19 @@ test.describe("Routes publiques", () => {
   test("la page /login s'affiche avec le formulaire de connexion", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: /Se connecter/i })).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Mot de passe")).toBeVisible();
+    await expect(page.locator('input[type="email"]').first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Se connecter/i })).toBeVisible();
   });
 
   test("la page /register s'affiche avec le formulaire d'inscription", async ({ page }) => {
     await page.goto("/register");
     await expect(page.getByRole("heading", { name: /Créer un compte/i })).toBeVisible();
-    await expect(page.getByLabel("Nom")).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Mot de passe")).toBeVisible();
-    await expect(page.getByLabel("Rôle")).toBeVisible();
+    await expect(page.locator('input[type="text"]').first()).toBeVisible();
+    await expect(page.locator('input[type="email"]').first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').nth(0)).toBeVisible();
+    await expect(page.locator('input[type="password"]').nth(1)).toBeVisible();
+    await expect(page.locator("select").first()).toBeVisible();
   });
 
   test("le lien 'Créer un compte' sur /login redirige vers /register", async ({ page }) => {

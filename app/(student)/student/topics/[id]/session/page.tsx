@@ -1,17 +1,32 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, X, Lightbulb, WifiOff } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle2,
+  Lightbulb,
+  LockKeyhole,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  WifiOff,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 
 import { JotnaLoader } from "@/components/jotna-loader";
-import { StarRating, PalierStarsBar } from "@/components/star-rating";
+import { playCorrect, setSoundEnabledLocal } from "@/lib/sounds";
+import { PalierStarsBar } from "@/components/star-rating";
 import { CapRegenAlternatives } from "@/components/cap-regen-alternatives";
 import { kidMessages } from "@/lib/kidCopy";
+import { ExplainStepByStep } from "@/components/student/explain-step-by-step";
+import { Pio } from "@/components/student/pio";
+import { StudentAlertDialog } from "@/components/student/student-alert-dialog";
 import QcmExercise from "@/components/exercises/QcmExercise";
 import ShortAnswerExercise from "@/components/exercises/ShortAnswerExercise";
 import MatchExercise from "@/components/exercises/MatchExercise";
@@ -39,15 +54,33 @@ type PalierResult = {
   cumulativeRegens: number;
 };
 
+type SceneAlert =
+  | { type: "regen-error"; message: string }
+  | { type: "parent-notified" }
+  | { type: "quit-confirm" };
+
+type AttemptProgress = {
+  currentIndex: number;
+  completedCount: number;
+  totalCount: number;
+  failedAttemptsThisExo: number;
+  hintsUsedThisExo: number;
+};
+
 export default function TopicSessionPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id: topicId } = use(params);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const palierIndex = parseInt(searchParams.get("palier") ?? "1", 10);
+
+  return <PalierSession key={`${topicId}-${palierIndex}`} topicId={topicId} palierIndex={palierIndex} />;
+}
+
+function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex: number }) {
+  const router = useRouter();
 
   // Wait for Convex auth before querying profile (Decision 99 — anti race-condition)
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
@@ -65,6 +98,9 @@ export default function TopicSessionPage({
   const requestHint = useMutation(api.palierAttempts.requestHint);
   const submitPalier = useMutation(api.palierAttempts.submitPalier);
   const regenerate = useAction(api.paliers.index.regenerateFailedExercises);
+  // D22 — quick-mute support during session focus mode
+  const soundPref = useQuery(api.students.getMySoundEnabled);
+  const setSoundEnabled = useMutation(api.streak.setSoundEnabled);
 
   // Bootstrap state
   const [palierAttemptId, setPalierAttemptId] =
@@ -77,9 +113,13 @@ export default function TopicSessionPage({
     api.paliers.index.getExercisesForPalier,
     palierAttemptId ? { palierAttemptId } : "skip",
   ) as SanitizedExo[] | null | undefined;
+  const attemptProgress = useQuery(
+    api.palierAttempts.getProgressForPalierAttempt,
+    palierAttemptId ? { palierAttemptId } : "skip",
+  ) as AttemptProgress | null | undefined;
 
   // Palier loop state
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [localCurrentIndex, setLocalCurrentIndex] = useState(0);
   const [feedback, setFeedback] = useState<{
     correct: boolean;
     attemptsRemaining: number;
@@ -88,10 +128,18 @@ export default function TopicSessionPage({
     text: string;
     index: number;
   } | null>(null);
-  const [hintsUsedThisExo, setHintsUsedThisExo] = useState(0);
+  const [localHintsUsedThisExo, setLocalHintsUsedThisExo] = useState(0);
+  const [localFailedAttemptsThisExo, setLocalFailedAttemptsThisExo] =
+    useState(0);
   const [palierResult, setPalierResult] = useState<PalierResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [sceneAlert, setSceneAlert] = useState<SceneAlert | null>(null);
+  const [localStateAttemptId, setLocalStateAttemptId] =
+    useState<Id<"palierAttempts"> | null>(null);
+  // Step-by-step explanation panel — opened when the kid taps
+  // "Je veux comprendre" after exhausting all 5 attempts on an exercise.
+  const [explainOpen, setExplainOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
   // Network status (Decision 90)
@@ -106,9 +154,26 @@ export default function TopicSessionPage({
     };
   }, []);
 
+  // D29 — sync local sound memo with server preference for play() short-circuit.
+  useEffect(() => {
+    if (soundPref?.soundEnabled !== undefined) {
+      setSoundEnabledLocal(soundPref.soundEnabled);
+    }
+  }, [soundPref?.soundEnabled]);
+
+  const handleToggleSound = useCallback(async () => {
+    const next = !(soundPref?.soundEnabled ?? false);
+    setSoundEnabledLocal(next);
+    try {
+      await setSoundEnabled({ enabled: next });
+    } catch {
+      // Mutation will queue offline; UI reflects optimistic state via memo.
+    }
+  }, [soundPref?.soundEnabled, setSoundEnabled]);
+
   // Bootstrap : getBucket → startAttempt
   useEffect(() => {
-    if (!topic || palierAttemptId || bootstrapping) return;
+    if (!topic || palierAttemptId || bootstrapping || bootstrapError) return;
     (async () => {
       setBootstrapping(true);
       setBootstrapError(null);
@@ -133,8 +198,10 @@ export default function TopicSessionPage({
         });
         const attemptId = await startAttempt({ palierId: bucket.palierId });
         setPalierAttemptId(attemptId);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      } catch (err: unknown) {
+        let msg = err instanceof Error ? err.message : String(err ?? "Erreur inconnue");
+        const match = msg.match(/Uncaught Error:\s*(.+?)(?:\n|$)/);
+        if (match) msg = match[1].trim();
         setBootstrapError(msg);
       } finally {
         setBootstrapping(false);
@@ -144,25 +211,80 @@ export default function TopicSessionPage({
     topic,
     palierAttemptId,
     bootstrapping,
+    bootstrapError,
     getBucket,
     startAttempt,
     topicId,
     palierIndex,
   ]);
 
+  const shouldUseServerProgress =
+    palierAttemptId !== null &&
+    localStateAttemptId !== palierAttemptId &&
+    attemptProgress !== null &&
+    attemptProgress !== undefined;
+  const currentIndex = shouldUseServerProgress
+    ? attemptProgress.currentIndex
+    : localCurrentIndex;
+  const hintsUsedThisExo = shouldUseServerProgress
+    ? attemptProgress.hintsUsedThisExo
+    : localHintsUsedThisExo;
+  const failedAttemptsThisExo = shouldUseServerProgress
+    ? attemptProgress.failedAttemptsThisExo
+    : localFailedAttemptsThisExo;
+
   const handleQuit = useCallback(() => {
-    if (
-      !window.confirm(
-        "Veux-tu vraiment quitter ? Ta progression est sauvegardée.",
-      )
-    )
-      return;
-    if (topic?.subjectId) {
-      router.push(`/student/subjects/${topic.subjectId}`);
-    } else {
-      router.push("/student/home");
+    setSceneAlert({ type: "quit-confirm" });
+  }, []);
+
+  const nextExoRef = useRef<() => void>(() => {});
+
+  const handleRequestHint = useCallback(async () => {
+    if (!exercises || !palierAttemptId) return;
+    const exo = exercises[currentIndex];
+    if (!exo) return;
+    if (hintsUsedThisExo >= exo.hintsAvailable) return;
+    try {
+      const res = await requestHint({
+        exerciseId: exo._id,
+        palierAttemptId,
+        hintIndex: hintsUsedThisExo,
+      });
+      setLocalStateAttemptId(palierAttemptId);
+      setHintShown({ text: res.hint, index: res.hintIndex });
+      setLocalHintsUsedThisExo(hintsUsedThisExo + 1);
+    } catch (err) {
+      console.error(err);
     }
-  }, [router, topic]);
+  }, [exercises, palierAttemptId, currentIndex, hintsUsedThisExo, requestHint]);
+
+  const handleNextExo = useCallback(async () => {
+    if (!exercises) return;
+    if (palierAttemptId) setLocalStateAttemptId(palierAttemptId);
+    setFeedback(null);
+    setHintShown(null);
+    setLocalHintsUsedThisExo(0);
+    setLocalFailedAttemptsThisExo(0);
+    if (currentIndex < exercises.length - 1) {
+      setLocalCurrentIndex(currentIndex + 1);
+      return;
+    }
+    // End of palier — submit
+    if (!palierAttemptId) return;
+    setSubmitting(true);
+    try {
+      const res = await submitPalier({ palierAttemptId });
+      setPalierResult(res as PalierResult);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [exercises, currentIndex, palierAttemptId, submitPalier]);
+
+  useEffect(() => {
+    nextExoRef.current = handleNextExo;
+  }, [handleNextExo]);
 
   const handleSubmitAnswer = useCallback(
     async (answer: string) => {
@@ -179,52 +301,29 @@ export default function TopicSessionPage({
           correct: res.isCorrect,
           attemptsRemaining: res.attemptsRemaining,
         });
+        if (res.isCorrect) {
+          setLocalStateAttemptId(palierAttemptId);
+          void playCorrect();
+          setTimeout(() => nextExoRef.current(), 1200);
+        } else {
+          setLocalStateAttemptId(palierAttemptId);
+          setLocalFailedAttemptsThisExo(failedAttemptsThisExo + 1);
+          if (res.attemptsRemaining > 0) {
+            setTimeout(() => setFeedback(null), 2500);
+          }
+        }
       } catch (err) {
         console.error(err);
       }
     },
-    [exercises, palierAttemptId, currentIndex, verifyAttempt],
+    [
+      exercises,
+      palierAttemptId,
+      currentIndex,
+      failedAttemptsThisExo,
+      verifyAttempt,
+    ],
   );
-
-  const handleRequestHint = useCallback(async () => {
-    if (!exercises || !palierAttemptId) return;
-    const exo = exercises[currentIndex];
-    if (!exo) return;
-    if (hintsUsedThisExo >= exo.hintsAvailable) return;
-    try {
-      const res = await requestHint({
-        exerciseId: exo._id,
-        palierAttemptId,
-        hintIndex: hintsUsedThisExo,
-      });
-      setHintShown({ text: res.hint, index: res.hintIndex });
-      setHintsUsedThisExo((n) => n + 1);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [exercises, palierAttemptId, currentIndex, hintsUsedThisExo, requestHint]);
-
-  const handleNextExo = useCallback(async () => {
-    if (!exercises) return;
-    setFeedback(null);
-    setHintShown(null);
-    setHintsUsedThisExo(0);
-    if (currentIndex < exercises.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      return;
-    }
-    // End of palier — submit
-    if (!palierAttemptId) return;
-    setSubmitting(true);
-    try {
-      const res = await submitPalier({ palierAttemptId });
-      setPalierResult(res as PalierResult);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [exercises, currentIndex, palierAttemptId, submitPalier]);
 
   const handleRegen = useCallback(async () => {
     if (!palierAttemptId) return;
@@ -232,13 +331,15 @@ export default function TopicSessionPage({
     try {
       await regenerate({ palierAttemptId });
       setPalierResult(null);
-      setCurrentIndex(0);
+      setLocalStateAttemptId(palierAttemptId);
+      setLocalCurrentIndex(0);
       setFeedback(null);
       setHintShown(null);
-      setHintsUsedThisExo(0);
+      setLocalHintsUsedThisExo(0);
+      setLocalFailedAttemptsThisExo(0);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur";
-      alert(msg);
+      setSceneAlert({ type: "regen-error", message: msg });
     } finally {
       setRegenerating(false);
     }
@@ -274,6 +375,22 @@ export default function TopicSessionPage({
   }
 
   if (bootstrapError) {
+    const isPalierLocked = bootstrapError.includes("valider le palier");
+    if (isPalierLocked && palierIndex > 1) {
+      return (
+        <LockedPalierScreen
+          currentPalier={palierIndex}
+          previousPalier={palierIndex - 1}
+          message={bootstrapError}
+          onGoPrevious={() =>
+            router.replace(
+              `/student/topics/${topicId}/session?palier=${palierIndex - 1}`,
+            )
+          }
+        />
+      );
+    }
+
     return (
       <CenteredCard>
         <p className="text-base text-red-600">{bootstrapError}</p>
@@ -287,7 +404,11 @@ export default function TopicSessionPage({
     );
   }
 
-  if (!palierAttemptId || exercises === undefined) {
+  if (
+    !palierAttemptId ||
+    exercises === undefined ||
+    attemptProgress === undefined
+  ) {
     return <JotnaLoader />;
   }
   if (exercises === null || exercises.length === 0) {
@@ -364,8 +485,7 @@ export default function TopicSessionPage({
                 : null
             }
             onAskParent={() => {
-              alert("Ton parent va recevoir une notification 📩");
-              router.push("/student/home");
+              setSceneAlert({ type: "parent-notified" });
             }}
           />
         )}
@@ -380,6 +500,22 @@ export default function TopicSessionPage({
             </Link>
           </div>
         )}
+        <SceneAlertDialog
+          alert={sceneAlert}
+          onClose={() => setSceneAlert(null)}
+          onGoHome={() => {
+            setSceneAlert(null);
+            router.push("/student/home");
+          }}
+          onQuit={() => {
+            setSceneAlert(null);
+            if (topic?.subjectId) {
+              router.push(`/student/subjects/${topic.subjectId}`);
+            } else {
+              router.push("/student/home");
+            }
+          }}
+        />
       </div>
     );
   }
@@ -415,14 +551,38 @@ export default function TopicSessionPage({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleQuit}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-white"
-        >
-          <X className="h-4 w-4" />
-          {kidMessages.cta.quit}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* D22 — quick-mute. Only renders if the kid has decided about
+              sounds (soundPref !== null + .soundEnabled defined). Hides for
+              brand-new students who haven't seen the opt-in dialog yet. */}
+          {soundPref && (
+            <button
+              type="button"
+              onClick={handleToggleSound}
+              aria-label={
+                soundPref.soundEnabled
+                  ? "Couper le son"
+                  : "Activer le son"
+              }
+              aria-pressed={soundPref.soundEnabled}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-gray-600 shadow-sm transition-all hover:bg-white"
+            >
+              {soundPref.soundEnabled ? (
+                <Volume2 className="h-5 w-5" aria-hidden />
+              ) : (
+                <VolumeX className="h-5 w-5" aria-hidden />
+              )}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleQuit}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-white"
+          >
+            <X className="h-4 w-4" />
+            {kidMessages.cta.quit}
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -451,88 +611,123 @@ export default function TopicSessionPage({
             disabled={disabled}
             isCorrect={feedback?.correct ?? null}
             onSubmit={handleSubmitAnswer}
+            onSkip={handleNextExo}
           />
 
-          {/* Hints */}
-          {!disabled && exo.hintsAvailable > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={handleRequestHint}
-                disabled={hintsUsedThisExo >= exo.hintsAvailable}
-                className="inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Lightbulb className="h-4 w-4" />
-                Demander un indice ({hintsUsedThisExo}/{exo.hintsAvailable})
-              </button>
-              {hintsUsedThisExo > 0 && (
-                <span className="text-xs italic text-gray-500">
-                  {kidMessages.hintLevel(hintsUsedThisExo, exo.hintsAvailable)}
-                </span>
+          {/* Hints — progressive: first hint unlocks after 1 failed attempt,
+              second after 2, third after 4. Only shown when the kid has failed
+              at least once and isn't currently seeing feedback. */}
+          {!feedback && failedAttemptsThisExo > 0 && exo.hintsAvailable > 0 && (
+            <div className="mt-4 space-y-2">
+              {hintsUsedThisExo < exo.hintsAvailable &&
+                hintsUsedThisExo < (failedAttemptsThisExo >= 4 ? 3 : failedAttemptsThisExo >= 2 ? 2 : 1) && (
+                <button
+                  onClick={handleRequestHint}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-200"
+                >
+                  <Lightbulb className="h-4 w-4" />
+                  Voir un indice
+                </button>
+              )}
+              {hintShown && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl bg-amber-50 border border-amber-200 p-3"
+                >
+                  <p className="text-sm text-amber-900">
+                    <span className="font-semibold">
+                      Indice {hintShown.index + 1} :
+                    </span>{" "}
+                    {hintShown.text}
+                  </p>
+                </motion.div>
               )}
             </div>
           )}
 
-          {/* Hint display */}
-          {hintShown && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3"
-            >
-              <p className="text-sm text-amber-900">
-                <span className="font-semibold">
-                  Indice {hintShown.index + 1} :
-                </span>{" "}
-                {hintShown.text}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Feedback */}
-          {feedback && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-4 space-y-3"
-            >
-              <div
-                className={`rounded-xl px-4 py-3 text-center font-semibold ${
-                  feedback.correct
-                    ? "bg-green-100 text-green-800"
-                    : "bg-orange-100 text-orange-800"
-                }`}
+          {/* Feedback — brief flash, no buttons. Auto-dismisses (correct →
+              auto-advance after 1.2s, wrong with retries → auto-clear 1.2s,
+              wrong with 0 retries → stays until "Je veux comprendre" or next). */}
+          <AnimatePresence>
+            {feedback && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4 space-y-3"
               >
-                {feedback.correct
-                  ? "✅ Bravo !"
-                  : feedback.attemptsRemaining > 0
-                    ? `Pas tout à fait. Il te reste ${feedback.attemptsRemaining} essai${feedback.attemptsRemaining > 1 ? "s" : ""}.`
-                    : "Tu peux passer à la suite."}
-              </div>
-              {(feedback.correct || feedback.attemptsRemaining === 0) && (
-                <button
-                  onClick={handleNextExo}
-                  disabled={submitting}
-                  className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-lg font-bold text-white shadow-lg hover:scale-[1.01] transition-all"
+                <div
+                  className={`rounded-xl px-4 py-3 text-center font-semibold ${
+                    feedback.correct
+                      ? "bg-green-100 text-green-800"
+                      : "bg-orange-100 text-orange-800"
+                  }`}
                 >
-                  {currentIndex < totalExos - 1
-                    ? kidMessages.cta.next
-                    : submitting
-                      ? "..."
-                      : "Voir mon résultat"}
-                </button>
-              )}
-              {!feedback.correct && feedback.attemptsRemaining > 0 && (
-                <button
-                  onClick={() => setFeedback(null)}
-                  className="w-full rounded-xl bg-white px-6 py-3 text-base font-semibold text-orange-600 border-2 border-orange-300 hover:bg-orange-50 transition-all"
-                >
-                  Réessayer
-                </button>
-              )}
-            </motion.div>
-          )}
+                  {feedback.correct
+                    ? "Bravo !"
+                    : feedback.attemptsRemaining > 0
+                      ? `Pas tout à fait…`
+                      : "Tu peux passer à la suite."}
+                </div>
+                {!feedback.correct && feedback.attemptsRemaining === 0 && (
+                  <>
+                    <button
+                      onClick={() => setExplainOpen(true)}
+                      disabled={submitting}
+                      className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-orange-300 bg-amber-50 px-6 py-3 text-base font-bold text-orange-700 shadow-sm hover:bg-amber-100 transition-all"
+                    >
+                      <Lightbulb className="h-5 w-5" aria-hidden />
+                      Je veux comprendre
+                    </button>
+                    <button
+                      onClick={handleNextExo}
+                      disabled={submitting}
+                      className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-lg font-bold text-white shadow-lg hover:scale-[1.01] transition-all"
+                    >
+                      {currentIndex < totalExos - 1
+                        ? kidMessages.cta.next
+                        : submitting
+                          ? "..."
+                          : "Voir mon résultat"}
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </AnimatePresence>
+
+      {/* Step-by-step pedagogical explanation overlay (kid clicked
+          "Je veux comprendre" after exhausting all 5 attempts). The
+          `key={exo._id}` forces a remount on exercise change so the
+          loading state resets cleanly without setState-in-effect. */}
+      {exo && (
+        <ExplainStepByStep
+          key={exo._id}
+          exerciseId={exo._id}
+          open={explainOpen}
+          onClose={() => setExplainOpen(false)}
+        />
+      )}
+      <SceneAlertDialog
+        alert={sceneAlert}
+        onClose={() => setSceneAlert(null)}
+        onGoHome={() => {
+          setSceneAlert(null);
+          router.push("/student/home");
+        }}
+        onQuit={() => {
+          setSceneAlert(null);
+          if (topic?.subjectId) {
+            router.push(`/student/subjects/${topic.subjectId}`);
+          } else {
+            router.push("/student/home");
+          }
+        }}
+      />
     </div>
   );
 }
@@ -540,6 +735,175 @@ export default function TopicSessionPage({
 // ===========================================================================
 // Helpers
 // ===========================================================================
+
+function SceneAlertDialog({
+  alert,
+  onClose,
+  onGoHome,
+  onQuit,
+}: {
+  alert: SceneAlert | null;
+  onClose: () => void;
+  onGoHome: () => void;
+  onQuit: () => void;
+}) {
+  if (alert?.type === "quit-confirm") {
+    return (
+      <StudentAlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+        tone="warning"
+        label="Pause possible"
+        title="Tu veux quitter ?"
+        description="Ta progression est sauvegardée. Tu pourras reprendre plus tard."
+        primaryLabel="Sauvegarder et quitter"
+        onPrimary={onQuit}
+        secondaryLabel="Continuer l'exercice"
+        onSecondary={onClose}
+      />
+    );
+  }
+
+  if (alert?.type === "parent-notified") {
+    return (
+      <StudentAlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onGoHome();
+        }}
+        tone="info"
+        label="Message envoyé"
+        title="Pio prévient ton parent"
+        description="Ton parent va recevoir une notification pour t'aider à continuer."
+        primaryLabel="Retour à l'accueil"
+        onPrimary={onGoHome}
+      />
+    );
+  }
+
+  if (alert?.type === "regen-error") {
+    return (
+      <StudentAlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+        tone="warning"
+        label="Petit blocage"
+        title="On réessaie dans un instant"
+        description={alert.message}
+        primaryLabel="J'ai compris"
+        onPrimary={onClose}
+      />
+    );
+  }
+
+  return null;
+}
+
+function LockedPalierScreen({
+  currentPalier,
+  previousPalier,
+  message,
+  onGoPrevious,
+}: {
+  currentPalier: number;
+  previousPalier: number;
+  message: string;
+  onGoPrevious: () => void;
+}) {
+  return (
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4 py-10">
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-amber-300 via-orange-300 to-pink-400 p-1 shadow-2xl"
+      >
+        <div className="absolute left-8 top-8 h-8 w-8 rotate-12 rounded-lg bg-white/35" />
+        <div className="absolute right-10 top-10 h-7 w-7 -rotate-12 rounded-md bg-sky-200/70" />
+        <div className="absolute bottom-12 left-12 h-6 w-6 rotate-45 rounded-md bg-emerald-200/70" />
+
+        <div className="relative rounded-[1.35rem] bg-white/92 px-5 py-7 text-center sm:px-8 sm:py-8">
+          <div className="mx-auto mb-3 flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-pink-100 shadow-inner">
+            <Pio state="hello" size={122} />
+          </div>
+
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-orange-700">
+            <LockKeyhole className="h-3.5 w-3.5" aria-hidden />
+            Palier {currentPalier} verrouillé
+          </div>
+
+          <h1 className="font-display text-3xl font-extrabold leading-tight text-slate-950 sm:text-4xl">
+            Encore une marche avant !
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-base font-semibold text-slate-600">
+            Pio garde ce palier au chaud. Termine d&apos;abord le palier{" "}
+            {previousPalier}, puis la suite s&apos;ouvrira.
+          </p>
+
+          <div className="mx-auto mt-6 grid max-w-md grid-cols-3 gap-2">
+            <StepBubble
+              active
+              icon={<CheckCircle2 className="h-5 w-5" aria-hidden />}
+              label={`Palier ${previousPalier}`}
+            />
+            <StepBubble
+              active={false}
+              icon={<LockKeyhole className="h-5 w-5" aria-hidden />}
+              label={`Palier ${currentPalier}`}
+            />
+            <StepBubble
+              active={false}
+              icon={<Sparkles className="h-5 w-5" aria-hidden />}
+              label="Après"
+            />
+          </div>
+
+          <p className="mx-auto mt-5 max-w-md rounded-2xl bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
+            {message}
+          </p>
+
+          <button
+            type="button"
+            onClick={onGoPrevious}
+            className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-extrabold text-white shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl sm:w-auto"
+          >
+            <ArrowLeft className="h-5 w-5" aria-hidden />
+            Reprendre le palier {previousPalier}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function StepBubble({
+  active,
+  icon,
+  label,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div
+      className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 px-2 py-3 ${
+        active
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-slate-200 bg-slate-50 text-slate-400"
+      }`}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm">
+        {icon}
+      </div>
+      <p className="text-xs font-extrabold">{label}</p>
+    </div>
+  );
+}
 
 function CenteredCard({ children }: { children: React.ReactNode }) {
   return (
@@ -554,11 +918,13 @@ function ExerciseRenderer({
   disabled,
   isCorrect,
   onSubmit,
+  onSkip,
 }: {
   exo: SanitizedExo;
   disabled: boolean;
   isCorrect: boolean | null;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
 }) {
   // Existing components expect payloads with the answer fields; we pass the
   // sanitized payload as-is. They render UI without the answer, which is fine
@@ -573,6 +939,7 @@ function ExerciseRenderer({
           disabled={disabled}
           isCorrect={isCorrect}
           onSubmit={onSubmit}
+          onSkip={onSkip}
         />
       );
     case "short-answer":
@@ -595,6 +962,7 @@ function ExerciseRenderer({
           disabled={disabled}
           isCorrect={isCorrect}
           onSubmit={onSubmit}
+          onSkip={onSkip}
         />
       );
     case "order":
@@ -606,6 +974,7 @@ function ExerciseRenderer({
           disabled={disabled}
           isCorrect={isCorrect}
           onSubmit={onSubmit}
+          onSkip={onSkip}
         />
       );
     case "drag-drop":
@@ -617,6 +986,7 @@ function ExerciseRenderer({
           disabled={disabled}
           isCorrect={isCorrect}
           onSubmit={onSubmit}
+          onSkip={onSkip}
         />
       );
     default:

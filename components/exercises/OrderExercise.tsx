@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, GripVertical } from "lucide-react";
+import { AlertTriangle, Check, X, GripVertical } from "lucide-react";
 import ExercisePrompt from "./ExercisePrompt";
 import {
   DndContext,
@@ -22,13 +22,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 interface OrderPayload {
-  correctSequence: string[];
+  correctSequence?: string[];
+  items?: string[];
 }
 
 interface OrderExerciseProps {
   prompt: string;
   payload: OrderPayload;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
   disabled: boolean;
   isCorrect: boolean | null;
 }
@@ -99,18 +101,38 @@ export default function OrderExercise({
   prompt,
   payload,
   onSubmit,
+  onSkip,
   disabled,
   isCorrect,
 }: OrderExerciseProps) {
-  // Start with a shuffled version
+  const source = Array.isArray(payload?.items)
+    ? payload.items.filter((s): s is string => typeof s === "string")
+    : Array.isArray(payload?.correctSequence)
+      ? payload.correctSequence.filter((s): s is string => typeof s === "string")
+      : [];
+
   const [items, setItems] = useState<string[]>(() => {
-    const shuffled = [...payload.correctSequence];
+    const shuffled = [...source];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
   });
+
+  if (source.length < 2) {
+    return (
+      <div className="space-y-4">
+        <ExercisePrompt prompt={prompt} />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
+          <p className="font-bold text-amber-900">Cet exercice est cassé, on te le saute.</p>
+          <p className="mt-1 text-sm text-amber-700">Pas de souci, ça ne te coûte rien.</p>
+          <button onClick={() => onSkip?.()} disabled={disabled} className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50">Suivant</button>
+        </div>
+      </div>
+    );
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),

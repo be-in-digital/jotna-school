@@ -53,4 +53,13 @@ crons.cron(
   {},
 );
 
+// D7b — daily streak rollover at 00:05 Africa/Dakar (UTC+0).
+// Resets streaks for kids who skipped a day (and have no freeze available).
+crons.cron(
+  "daily streak rollover",
+  "5 0 * * *",
+  internal.streak.dailyStreakRollover,
+  {},
+);
+
 export default crons;

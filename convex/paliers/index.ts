@@ -19,7 +19,6 @@ import {
   buildPalierBaseSystemPrompt,
   buildVariationPrompt,
   buildVariationSystemPrompt,
-  type ClassLevel,
 } from "./prompts";
 import { checkMathExercise } from "../aiGateway/factCheck";
 import { computeExerciseScore } from "./scoring";
@@ -49,6 +48,57 @@ const exerciseTypeValidator = v.union(
 // ===========================================================================
 // READ — bucket lookup
 // ===========================================================================
+
+export const getProfileByUserId = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+  },
+});
+
+/**
+ * Check that a student has validated every palier from 1..palierIndex-1.
+ * Returns the first missing (unvalidated) palier index, or null if all clear.
+ */
+export const checkPalierProgression = internalQuery({
+  args: {
+    profileId: v.id("profiles"),
+    subjectId: v.id("subjects"),
+    class: classValidator,
+    topicId: v.id("topics"),
+    palierIndex: v.number(),
+  },
+  handler: async (ctx, args): Promise<{ blockedAt: number } | null> => {
+    if (args.palierIndex <= 1) return null;
+
+    for (let i = 1; i < args.palierIndex; i++) {
+      const palier = await ctx.db
+        .query("paliers")
+        .withIndex("by_bucket", (q) =>
+          q
+            .eq("subjectId", args.subjectId)
+            .eq("class", args.class)
+            .eq("topicId", args.topicId)
+            .eq("palierIndex", i),
+        )
+        .unique();
+
+      if (!palier) return { blockedAt: i };
+
+      const attempts = await ctx.db
+        .query("palierAttempts")
+        .withIndex("by_user_palier", (q) =>
+          q.eq("userId", args.profileId).eq("palierId", palier._id),
+        )
+        .collect();
+      if (!attempts.some((a) => a.status === "validated")) return { blockedAt: i };
+    }
+    return null;
+  },
+});
 
 /**
  * Find an existing palier row for (subjectId, class, topicId, palierIndex).
@@ -514,6 +564,31 @@ export const getBucket = action({
     cacheHit: boolean;
     qaStatus: string;
   }> => {
+    if (args.palierIndex > 1) {
+      const authUserId = await getAuthUserId(ctx);
+      if (!authUserId) throw new Error("Non authentifié");
+      const profile = await ctx.runQuery(
+        internal.paliers.index.getProfileByUserId,
+        { userId: authUserId as string },
+      );
+      if (!profile) throw new Error("Profil introuvable");
+      const blocked = await ctx.runQuery(
+        internal.paliers.index.checkPalierProgression,
+        {
+          profileId: profile._id,
+          subjectId: args.subjectId,
+          class: args.class,
+          topicId: args.topicId,
+          palierIndex: args.palierIndex,
+        },
+      );
+      if (blocked) {
+        throw new Error(
+          `Tu dois d'abord valider le palier ${blocked.blockedAt} avant de passer au suivant.`,
+        );
+      }
+    }
+
     const existing = await ctx.runQuery(internal.paliers.index.findBucket, {
       subjectId: args.subjectId,
       class: args.class,
@@ -592,7 +667,15 @@ export const getBucket = action({
 
     const parsed = parseExercises(gen.result);
     const isMaths = subject.subjectName.toLowerCase().startsWith("math");
-    const factCheck = isMaths ? verifyMathBatch(parsed) : { totalChecked: 0, divergences: 0, exos: parsed.map(toPersistedShape) };
+    const factCheck = isMaths
+      ? verifyMathBatch(parsed)
+      : {
+          totalChecked: 0,
+          divergences: 0,
+          exos: parsed
+            .map((ex, i) => toPersistedShape(ex, i))
+            .filter((s): s is PersistedShape => s !== null),
+        };
 
     // Persist palier row + exercises.
     const palierId: Id<"paliers"> = await ctx.runMutation(
@@ -741,7 +824,15 @@ export const regenerateFailedExercises = action({
       return { ok: false, reason: "EMPTY_VARIATIONS" };
     }
     const isMaths = subject.name.toLowerCase().startsWith("math");
-    const factCheck = isMaths ? verifyMathBatch(parsed) : { totalChecked: 0, divergences: 0, exos: parsed.map(toPersistedShape) };
+    const factCheck = isMaths
+      ? verifyMathBatch(parsed)
+      : {
+          totalChecked: 0,
+          divergences: 0,
+          exos: parsed
+            .map((ex, i) => toPersistedShape(ex, i))
+            .filter((s): s is PersistedShape => s !== null),
+        };
 
     // Pair variations with originals (1-to-1, in order).
     const variations = factCheck.exos.slice(0, failed.length).map((v, i) => ({
@@ -843,6 +934,71 @@ export const startPalierAttempt = mutation({
 
     const palier = await ctx.db.get(args.palierId);
     if (!palier) throw new Error("Palier introuvable");
+
+    if (palier.palierIndex > 1) {
+      for (let i = 1; i < palier.palierIndex; i++) {
+        const prev = await ctx.db
+          .query("paliers")
+          .withIndex("by_bucket", (q) =>
+            q
+              .eq("subjectId", palier.subjectId)
+              .eq("class", palier.class)
+              .eq("topicId", palier.topicId)
+              .eq("palierIndex", i),
+          )
+          .unique();
+
+        if (!prev) {
+          throw new Error(
+            `Tu dois d'abord valider le palier ${i} avant de passer au suivant.`,
+          );
+        }
+
+        const prevAttempts = await ctx.db
+          .query("palierAttempts")
+          .withIndex("by_user_palier", (q) =>
+            q.eq("userId", profile._id).eq("palierId", prev._id),
+          )
+          .collect();
+        if (!prevAttempts.some((a) => a.status === "validated")) {
+          throw new Error(
+            `Tu dois d'abord valider le palier ${i} avant de passer au suivant.`,
+          );
+        }
+      }
+    }
+
+    const inProgressAttempts = (
+      await ctx.db
+        .query("palierAttempts")
+        .withIndex("by_user_palier", (q) =>
+          q.eq("userId", profile._id).eq("palierId", args.palierId),
+        )
+        .collect()
+    ).filter((attempt) => attempt.status === "in_progress");
+
+    if (inProgressAttempts.length > 0) {
+      let best = inProgressAttempts[0];
+      let bestActivityCount = -1;
+      for (const attempt of inProgressAttempts) {
+        const activity = await ctx.db
+          .query("attempts")
+          .withIndex("by_palierAttemptId", (q) =>
+            q.eq("palierAttemptId", attempt._id),
+          )
+          .take(100);
+        const activityCount = activity.length;
+        if (
+          activityCount > bestActivityCount ||
+          (activityCount === bestActivityCount &&
+            attempt.startedAt > best.startedAt)
+        ) {
+          best = attempt;
+          bestActivityCount = activityCount;
+        }
+      }
+      return best._id;
+    }
 
     return await ctx.db.insert("palierAttempts", {
       userId: profile._id,
@@ -948,7 +1104,57 @@ interface PersistedShape {
   needsManualReview?: boolean;
 }
 
-function toPersistedShape(ex: RawGenExercise, idx?: number): PersistedShape {
+function validatePayload(
+  type: PersistedShape["type"],
+  raw: unknown,
+): { valid: boolean; payload: unknown } {
+  if (!raw || typeof raw !== "object") return { valid: false, payload: raw };
+  const p = raw as Record<string, unknown>;
+
+  switch (type) {
+    case "qcm": {
+      const opts = Array.isArray(p.options) ? p.options.filter((o): o is string => typeof o === "string") : [];
+      if (opts.length < 2) return { valid: false, payload: raw };
+      if (typeof p.correctIndex !== "number" || p.correctIndex < 0 || p.correctIndex >= opts.length) return { valid: false, payload: raw };
+      return { valid: true, payload: { ...p, options: opts } };
+    }
+    case "match": {
+      const pairs = Array.isArray(p.pairs)
+        ? p.pairs.filter(
+            (pair): pair is { left: string; right: string } =>
+              !!pair && typeof pair === "object" && typeof (pair as Record<string, unknown>).left === "string" && typeof (pair as Record<string, unknown>).right === "string",
+          )
+        : [];
+      if (pairs.length < 2) return { valid: false, payload: raw };
+      return { valid: true, payload: { ...p, pairs } };
+    }
+    case "order": {
+      const seq = Array.isArray(p.correctSequence) ? p.correctSequence.filter((s): s is string => typeof s === "string") : [];
+      if (seq.length < 2) return { valid: false, payload: raw };
+      return { valid: true, payload: { ...p, correctSequence: seq } };
+    }
+    case "drag-drop": {
+      const zones = Array.isArray(p.zones) ? p.zones.filter((z): z is string => typeof z === "string") : [];
+      const items = Array.isArray(p.items)
+        ? p.items.filter(
+            (it): it is { text: string; correctZone: string } =>
+              !!it && typeof it === "object" && typeof (it as Record<string, unknown>).text === "string" && typeof (it as Record<string, unknown>).correctZone === "string",
+          )
+        : [];
+      if (zones.length < 2 || items.length < 2) return { valid: false, payload: raw };
+      return { valid: true, payload: { ...p, zones, items } };
+    }
+    case "short-answer": {
+      const accepted = Array.isArray(p.acceptedAnswers) ? p.acceptedAnswers.filter((a): a is string => typeof a === "string") : [];
+      if (accepted.length === 0) return { valid: false, payload: raw };
+      return { valid: true, payload: { ...p, acceptedAnswers: accepted } };
+    }
+    default:
+      return { valid: false, payload: raw };
+  }
+}
+
+function toPersistedShape(ex: RawGenExercise, idx?: number): PersistedShape | null {
   const t = (ex.type ?? "short-answer") as PersistedShape["type"];
   const allowed: PersistedShape["type"][] = [
     "qcm",
@@ -958,12 +1164,21 @@ function toPersistedShape(ex: RawGenExercise, idx?: number): PersistedShape {
     "short-answer",
   ];
   const safeType = allowed.includes(t) ? t : "short-answer";
+  const prompt = ex.statement ?? ex.prompt ?? "";
+  if (!prompt) return null;
+
+  const { valid, payload } = validatePayload(safeType, ex.payload ?? {});
+  if (!valid) return null;
+
+  const answerKey = typeof ex.correctAnswer === "string" ? ex.correctAnswer : String(ex.correctAnswer ?? "");
+  if (!answerKey) return null;
+
   const hintsArr = Array.isArray(ex.hints) ? (ex.hints as unknown[]).map(String) : [];
   return {
     type: safeType,
-    prompt: ex.statement ?? ex.prompt ?? "",
-    payload: ex.payload ?? {},
-    answerKey: typeof ex.correctAnswer === "string" ? ex.correctAnswer : String(ex.correctAnswer ?? ""),
+    prompt,
+    payload,
+    answerKey,
     hints: hintsArr.slice(0, 3),
     order: typeof idx === "number" ? idx + 1 : 1,
     mathExpression: ex.mathExpression ?? null,
@@ -978,8 +1193,11 @@ function verifyMathBatch(parsed: RawGenExercise[]): {
 } {
   let totalChecked = 0;
   let divergences = 0;
-  const exos: PersistedShape[] = parsed.map((raw, i) => {
+  const exos: PersistedShape[] = [];
+  for (let i = 0; i < parsed.length; i++) {
+    const raw = parsed[i];
     const shape = toPersistedShape(raw, i);
+    if (!shape) continue;
     if (raw.mathExpression) {
       totalChecked++;
       const result = checkMathExercise(raw.mathExpression, shape.answerKey);
@@ -988,8 +1206,8 @@ function verifyMathBatch(parsed: RawGenExercise[]): {
         shape.needsManualReview = true;
       }
     }
-    return shape;
-  });
+    exos.push(shape);
+  }
   return { totalChecked, divergences, exos };
 }
 

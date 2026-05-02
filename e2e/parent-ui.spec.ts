@@ -8,7 +8,7 @@ test.describe("Espace Parent", () => {
 
   test("la page /parent/children/add contient un formulaire", async ({ page }) => {
     await page.goto("/parent/children/add");
-    await expect(page.locator("form")).toBeVisible();
+    await expect(page.locator("main form").first()).toBeVisible();
   });
 
   test("la page /parent/settings se charge", async ({ page }) => {

@@ -10,8 +10,6 @@ import { test, expect } from "@playwright/test";
  * Pre-requisite: `npx convex run testSeeds:seedMvp1` already executed.
  */
 
-const FRACTIONS_CE2_TOPIC_ID = "kx75b69trm9sbs2j34n0qvsdgd85pm7r";
-
 test.describe("MVP-1 — Full E2E with auth", () => {
   test("registers + logs in + navigates to palier (1ère gen IA)", async ({
     page,
@@ -32,7 +30,9 @@ test.describe("MVP-1 — Full E2E with auth", () => {
     // Labels not associated via for/id, use type selectors
     await page.locator('input[type="text"]').fill(`E2E Student ${ts}`);
     await page.locator('input[type="email"]').fill(email);
-    await page.locator('input[type="password"]').fill(password);
+    const passwordFields = page.locator('input[type="password"]');
+    await passwordFields.nth(0).fill(password);
+    await passwordFields.nth(1).fill(password);
     await page.locator("select").selectOption("student");
 
     await page.screenshot({
@@ -55,7 +55,7 @@ test.describe("MVP-1 — Full E2E with auth", () => {
     // 3. If redirected to /login, log in explicitly
     if (page.url().includes("/login")) {
       await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
+      await page.locator('input[type="password"]').first().fill(password);
       await page.getByRole("button", { name: /Se connecter/i }).first().click();
       // Wait for navigation AWAY from /login (more specific than before)
       await page.waitForFunction(() => !location.pathname.includes("/login"), {

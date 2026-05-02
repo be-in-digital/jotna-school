@@ -86,6 +86,11 @@
 /* Dark mode disabled app-wide: force all tokens to light values regardless
    of the system preference or any `.dark` class on ancestors. */
 
+@keyframes legendaryPulse {
+  0%, 100% { box-shadow: 0 0 20px 4px rgba(251,191,36,0.35); }
+  50% { box-shadow: 0 0 28px 8px rgba(251,191,36,0.5); }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
