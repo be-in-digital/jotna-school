@@ -1,3 +1,5 @@
+import type React from "react";
+
 /**
  * Phase B / D10 — UI helpers for badge rarity rendering.
  *
@@ -22,27 +24,33 @@ export function getRarityLabel(tier: RarityTier): string {
   }
 }
 
-/**
- * Tailwind classes applied to an *earned* badge card to convey rarity.
- * - common  → no glow (plain card)
- * - rare    → soft blue ring + glow
- * - epic    → purple ring + stronger glow
- * - legendary → amber ring + pulse
- *
- * Returns class strings designed to compose with the base card. Common tier
- * returns an empty string so the layout doesn't shift between tiers.
- */
 export function getRarityRingClass(tier: RarityTier): string {
   switch (tier) {
     case "common":
       return "";
     case "rare":
-      return "ring-2 ring-blue-300/70 shadow-blue-200/50";
+      return "ring-2 ring-blue-300/70 shadow-lg shadow-blue-200/40";
     case "epic":
-      return "ring-2 ring-purple-400/70 shadow-purple-300/50";
+      return "ring-2 ring-purple-400/80 shadow-lg shadow-purple-300/50";
     case "legendary":
-      return "ring-2 ring-amber-400/80 shadow-amber-300/60 animate-pulse";
+      return "ring-2 ring-amber-400 shadow-[0_0_20px_4px_rgba(251,191,36,0.35)] animate-[legendaryPulse_2s_ease-in-out_infinite]";
   }
+}
+
+export function getRarityGlowStyle(tier: RarityTier): React.CSSProperties {
+  if (tier === "legendary") {
+    return {
+      background:
+        "linear-gradient(135deg, rgba(251,191,36,0.08), rgba(245,158,11,0.12), rgba(251,191,36,0.08))",
+    };
+  }
+  if (tier === "epic") {
+    return {
+      background:
+        "linear-gradient(135deg, rgba(168,85,247,0.06), rgba(192,132,252,0.1), rgba(168,85,247,0.06))",
+    };
+  }
+  return {};
 }
 
 /** Small chip color matching the rarity, e.g. for a "Rare" pill on the card. */

@@ -63,6 +63,54 @@ export function readStudentPreferences(
 }
 
 // ---------------------------------------------------------------------------
+// Topic status resolution (D4 — linear unlock chain).
+// Extracted as a pure function so the logic is unit-testable.
+// ---------------------------------------------------------------------------
+export type TopicInput = {
+  id: string;
+  order: number;
+  isCompleted: boolean;
+  validatedPaliers: number;
+  hasInProgress: boolean;
+  completedExercises: number;
+};
+
+export type TopicStatus = "locked" | "available" | "in_progress" | "completed";
+
+export function resolveTopicStatuses(
+  topics: TopicInput[],
+): TopicStatus[] {
+  const sorted = [...topics].sort((a, b) => a.order - b.order);
+  const statuses: TopicStatus[] = [];
+  let prevPassedForUnlock = true;
+
+  for (const topic of sorted) {
+    const passedForUnlock =
+      topic.isCompleted || topic.validatedPaliers >= 1;
+
+    let status: TopicStatus;
+    if (!prevPassedForUnlock) {
+      status = "locked";
+    } else if (topic.isCompleted) {
+      status = "completed";
+    } else if (
+      topic.hasInProgress ||
+      topic.validatedPaliers > 0 ||
+      topic.completedExercises > 0
+    ) {
+      status = "in_progress";
+    } else {
+      status = "available";
+    }
+
+    statuses.push(status);
+    prevPassedForUnlock = passedForUnlock;
+  }
+
+  return statuses;
+}
+
+// ---------------------------------------------------------------------------
 // Queries for admin student management
 // ---------------------------------------------------------------------------
 
@@ -613,45 +661,36 @@ export const getStudentSubjectMap = query({
       }
     }
 
-    let prevPassedForUnlock = true; // First topic is always unlocked.
-    const orderedTopics = topics.map((topic) => {
+    const topicInputs: TopicInput[] = topics.map((topic) => {
       const stats = topicStats.get(topic._id as string)!;
       const progress = progressByTopicId.get(topic._id as string);
-      const isCompleted = progress?.completedAt != null;
-      const passedForUnlock = isCompleted || stats.validatedPaliers >= 1;
+      return {
+        id: topic._id as string,
+        order: topic.order,
+        isCompleted: progress?.completedAt != null,
+        validatedPaliers: stats.validatedPaliers,
+        hasInProgress: stats.hasInProgress,
+        completedExercises: progress?.completedExercises ?? 0,
+      };
+    });
+    const statuses = resolveTopicStatuses(topicInputs);
 
-      let status: "locked" | "available" | "in_progress" | "completed";
-      if (!prevPassedForUnlock) {
-        status = "locked";
-      } else if (isCompleted) {
-        status = "completed";
-      } else if (
-        stats.hasInProgress ||
-        stats.validatedPaliers > 0 ||
-        (progress?.completedExercises ?? 0) > 0
-      ) {
-        status = "in_progress";
-      } else {
-        status = "available";
-      }
-
-      const out = {
+    const orderedTopics = topics.map((topic, i) => {
+      const stats = topicStats.get(topic._id as string)!;
+      const progress = progressByTopicId.get(topic._id as string);
+      return {
         _id: topic._id,
         name: topic.name,
         description: topic.description,
         order: topic.order,
         class: topic.class ?? null,
-        status,
+        status: statuses[i],
         validatedPaliers: stats.validatedPaliers,
-        // Next palier the kid should attempt (1-based). Capped at 10 (PALIER max).
         nextPalierIndex: Math.min(10, stats.maxValidatedPalierIndex + 1),
         starsApprox: stats.starsApprox,
         completedExercises: progress?.completedExercises ?? 0,
         correctExercises: progress?.correctExercises ?? 0,
       };
-
-      prevPassedForUnlock = passedForUnlock;
-      return out;
     });
 
     const totalStarsApprox = orderedTopics.reduce(

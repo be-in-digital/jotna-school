@@ -130,6 +130,7 @@ function ensureSound(Howl: HowlConstructor, name: SoundName): HowlInstance {
  */
 export function setSoundEnabledLocal(enabled: boolean): void {
   soundEnabledMemo = enabled;
+  if (enabled) attachOnlineRetry();
 }
 
 export function getSoundEnabledLocal(): boolean {
@@ -171,6 +172,19 @@ export async function play(name: SoundName): Promise<void> {
   } catch {
     // Swallow — never bubble audio failures to UI.
   }
+}
+
+// D27 — Retry preload when the device comes back online. The listener is
+// registered at most once (module-level singleton). It only fires if the kid
+// had previously opted in (soundEnabledMemo is true) so there's no wasted
+// bandwidth for kids who haven't accepted sounds.
+let onlineListenerAttached = false;
+function attachOnlineRetry(): void {
+  if (onlineListenerAttached || typeof window === "undefined") return;
+  onlineListenerAttached = true;
+  window.addEventListener("online", () => {
+    if (soundEnabledMemo) void preloadAll();
+  });
 }
 
 // Convenience typed shortcuts (D30 — encourage using these over play(name)).

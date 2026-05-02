@@ -7,7 +7,9 @@ import { Loader2, Lock, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   getRarityChipClass,
+  getRarityGlowStyle,
   getRarityLabel,
+  getRarityRingClass,
   type RarityTier,
 } from "@/lib/badges";
 import {
@@ -148,7 +150,8 @@ export default function StudentBadgesPage() {
                 whileHover={{ scale: 1.04, y: -4 }}
                 whileTap={{ scale: 0.97 }}
                 transition={{ type: "spring", stiffness: 320, damping: 18 }}
-                className="group relative flex min-h-48 flex-col items-center justify-between gap-3 overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 text-center shadow-[0_4px_16px_-6px_rgba(15,23,42,0.12)] transition-shadow hover:shadow-[0_8px_22px_-6px_rgba(15,23,42,0.18)] sm:p-5"
+                style={isEarned ? getRarityGlowStyle(badge.rarity) : undefined}
+                className={`group relative flex min-h-48 flex-col items-center justify-between gap-3 overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 text-center shadow-[0_4px_16px_-6px_rgba(15,23,42,0.12)] transition-shadow hover:shadow-[0_8px_22px_-6px_rgba(15,23,42,0.18)] sm:p-5 ${isEarned ? getRarityRingClass(badge.rarity) : ""}`}
                 aria-label={
                   isEarned
                     ? `${badge.name} — obtenu`
