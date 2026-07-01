@@ -116,13 +116,24 @@ test.describe("MVP-1 — play palier", () => {
 
     await registerAndLogin(page);
 
-    // Navigate via dashboard click
-    await page.goto("/student/home");
+    // Redesign Gaming — natural flow: carte-monde → zone Mathématiques →
+    // nœud de niveau (aria-label « Commencer … » / « Continuer … »).
+    await page.goto("/student/map");
     await page.waitForTimeout(3000);
     await page.getByRole("link", { name: /Mathématiques/i }).first().click();
     await page.waitForTimeout(3000);
-    await page.getByText(/Commencer/i).first().click();
-    await page.waitForTimeout(8000); // wait for palier load (cached)
+    await page
+      .getByRole("link", { name: /Commencer|Continuer/i })
+      .first()
+      .click();
+    // Palier can be served from cache (seconds) or AI-generated on a cache
+    // miss (fresh account / expired weekly cache) — wait for the session UI
+    // instead of a fixed sleep.
+    await expect(
+      page
+        .getByText(/Question \d+\/\d+|Sauvegarder et quitter|Valider/)
+        .first(),
+    ).toBeVisible({ timeout: 120_000 });
 
     await page.screenshot({
       path: ".context/screenshots/play-00-palier-start.png",
@@ -130,7 +141,7 @@ test.describe("MVP-1 — play palier", () => {
     });
 
     const startBody = (await page.textContent("body")) ?? "";
-    expect(startBody).toMatch(/Question 1\/10|Sauvegarder et quitter|Valider/);
+    expect(startBody).toMatch(/Question 1\/\d+|Sauvegarder et quitter|Valider/);
 
     const result = await playOneExercise(page, 1);
     console.log(`First exercise result: ${result}`);
@@ -146,7 +157,7 @@ test.describe("MVP-1 — play palier", () => {
     console.log("After first exercise:", finalBody.slice(0, 300));
 
     expect(finalBody).toMatch(
-      /Question \d+\/10|Bravo|Pas tout|Tu peux passer|Voir un indice|Palier (validé|non validé)/i,
+      /Question \d+\/\d+|Bravo|Pas tout|Tu peux passer|Voir un indice|Palier (validé|non validé)/i,
     );
   });
 });

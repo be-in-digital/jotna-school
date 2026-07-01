@@ -70,8 +70,9 @@ test.describe("MVP-1 — Full E2E with auth", () => {
       fullPage: true,
     });
 
-    // 4. Navigate via natural user flow: dashboard → Mathématiques → topic
-    await page.goto("/student/home");
+    // 4. Redesign Gaming — natural user flow: carte-monde → zone
+    //    Mathématiques → nœud de niveau sur le sentier.
+    await page.goto("/student/map");
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
     await page.screenshot({
@@ -79,7 +80,7 @@ test.describe("MVP-1 — Full E2E with auth", () => {
       fullPage: true,
     });
 
-    // Click Mathématiques card to view its topics
+    // Click the Mathématiques zone to view its trail
     await page.getByRole("link", { name: /Mathématiques/i }).first().click();
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
@@ -88,8 +89,11 @@ test.describe("MVP-1 — Full E2E with auth", () => {
       fullPage: true,
     });
 
-    // Click "Commencer" on Fractions topic — preserves SPA auth context
-    await page.getByText(/Commencer/i).first().click();
+    // Click the first playable level node — preserves SPA auth context
+    await page
+      .getByRole("link", { name: /Commencer|Continuer/i })
+      .first()
+      .click();
     await page.waitForLoadState("domcontentloaded");
 
     // Diagnostic: capture URL + cookies + localStorage + sessionStorage
