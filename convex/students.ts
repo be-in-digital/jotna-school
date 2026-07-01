@@ -55,6 +55,11 @@ export type StudentPreferences = {
   // shown the celebration overlay for. Diff against computeLevel(...) →
   // unseenLevelUp in getMyStats. Always monotonically increasing.
   lastSeenLevel?: number;
+  // Redesign Gaming G7 — lifetime aggregate of étoiles bonus earned from
+  // completed daily quests. Credited by quests.recordActivity; summed into
+  // getMyStats.totalStars. Kept here (not recomputed from dailyQuests rows)
+  // so totalStars stays a bounded read.
+  questBonusStars?: number;
 };
 export function readStudentPreferences(
   profile: Doc<"profiles">,
@@ -319,14 +324,18 @@ export const getMyStats = query({
     const totalTimeMs = attempts.reduce((s, a) => s + a.timeSpentMs, 0);
 
     // D3c — total stars approximated from validated palierAttempts.
+    // Redesign Gaming G7 — plus the lifetime quest bonus (see quests.ts).
     const palierAttempts = await ctx.db
       .query("palierAttempts")
       .withIndex("by_user", (q) => q.eq("userId", studentId))
       .take(500);
-    const totalStars = palierAttempts.reduce((acc, a) => {
+    const palierStars = palierAttempts.reduce((acc, a) => {
       if (a.status !== "validated") return acc;
       return acc + approxStarsForValidatedPalier(a.averageScore ?? 0);
     }, 0);
+    const totalStars =
+      palierStars +
+      ((readStudentPreferences(profile).questBonusStars ?? 0));
 
     const subjectCounts: Record<string, { name: string; count: number }> = {};
     for (const p of progress) {
@@ -416,6 +425,112 @@ export const getMyStats = query({
       // D2b/D24 — unseen level-up drives the LevelUpOverlay on /complete
       unseenLevelUp,
     };
+  },
+});
+
+/**
+ * Redesign Gaming — world map data: every subject as a « zone » with the
+ * student's progression. Data-driven (any number of subjects) and bounded:
+ * one topics read per subject + the student's own progress rows.
+ */
+export const getMyWorldMap = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") return null;
+
+    const subjects = await ctx.db.query("subjects").take(50);
+    subjects.sort((a, b) => a.order - b.order);
+
+    const myProgress = await ctx.db
+      .query("studentTopicProgress")
+      .withIndex("by_studentId", (q) => q.eq("studentId", profile._id))
+      .take(500);
+    const completedTopicIds = new Set(
+      myProgress.filter((p) => p.completedAt != null).map((p) => p.topicId as string),
+    );
+
+    // Current zone = subject of the most recent in-progress palier attempt.
+    const attempts = await ctx.db
+      .query("palierAttempts")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .take(500);
+    const lastInProgress = attempts
+      .filter((a) => a.status === "in_progress")
+      .sort((a, b) => b.startedAt - a.startedAt)[0];
+    let currentSubjectId: string | null = null;
+    if (lastInProgress) {
+      const palier = await ctx.db.get(lastInProgress.palierId);
+      currentSubjectId = (palier?.subjectId as string) ?? null;
+    }
+
+    const zones = [];
+    for (const subject of subjects) {
+      const topics = await ctx.db
+        .query("topics")
+        .withIndex("by_subjectId", (q) => q.eq("subjectId", subject._id))
+        .take(200);
+      const completedTopics = topics.filter((t) =>
+        completedTopicIds.has(t._id as string),
+      ).length;
+      zones.push({
+        _id: subject._id,
+        name: subject.name,
+        color: subject.color,
+        order: subject.order,
+        topicCount: topics.length,
+        completedTopics,
+        isCurrent: (subject._id as string) === currentSubjectId,
+      });
+    }
+    return zones;
+  },
+});
+
+/**
+ * Redesign Gaming — resume target for the hub's « Continuer l'aventure » CTA.
+ * Most recent in-progress palier attempt → its topic + subject. Null when
+ * nothing is in progress (client falls back to the world map).
+ */
+export const getMyResumeTarget = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") return null;
+
+    const attempts = await ctx.db
+      .query("palierAttempts")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .take(500);
+    const inProgress = attempts
+      .filter((a) => a.status === "in_progress")
+      .sort((a, b) => b.startedAt - a.startedAt);
+
+    for (const attempt of inProgress) {
+      const palier = await ctx.db.get(attempt.palierId);
+      if (!palier) continue;
+      const topic = await ctx.db.get(palier.topicId);
+      if (!topic) continue;
+      const subject = await ctx.db.get(topic.subjectId);
+      return {
+        topicId: topic._id,
+        topicName: topic.name,
+        subjectId: topic.subjectId,
+        subjectName: subject?.name ?? "",
+        palierIndex: palier.palierIndex,
+      };
+    }
+    return null;
   },
 });
 

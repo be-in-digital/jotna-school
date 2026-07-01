@@ -2,6 +2,7 @@ import { query, mutation, internalQuery, internalMutation } from "./_generated/s
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Compute where the current student should resume in a given topic session.
@@ -192,13 +193,26 @@ function verifyShortAnswer(
 export const submit = mutation({
   args: {
     exerciseId: v.id("exercises"),
-    studentId: v.id("profiles"),
     submittedAnswer: v.string(),
     attemptNumber: v.number(),
     hintsUsedCount: v.number(),
     timeSpentMs: v.number(),
   },
   handler: async (ctx, args) => {
+    // Security — the student is ALWAYS the authenticated caller. The old
+    // `studentId` argument allowed any logged-in user to write attempts and
+    // progress on someone else's behalf.
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Non authentifié");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") {
+      throw new Error("Profil élève introuvable");
+    }
+    const studentId = profile._id;
+
     const exercise = await ctx.db.get(args.exerciseId);
     if (!exercise) {
       throw new Error("Exercice introuvable");
@@ -226,9 +240,19 @@ export const submit = mutation({
         throw new Error(`Type d'exercice non supporté: ${exercise.type}`);
     }
 
+    // First-correct guard for progress + quest events: prior attempts on
+    // this exercise by this student (bounded — 5 attempts max per exercise).
+    const previous = await ctx.db
+      .query("attempts")
+      .withIndex("by_studentId_exerciseId", (q) =>
+        q.eq("studentId", studentId).eq("exerciseId", args.exerciseId),
+      )
+      .take(25);
+    const hadCorrectBefore = previous.some((a) => a.isCorrect);
+
     // Create the attempt record
     const attemptId = await ctx.db.insert("attempts", {
-      studentId: args.studentId,
+      studentId,
       exerciseId: args.exerciseId,
       submittedAnswer: args.submittedAnswer,
       isCorrect,
@@ -248,7 +272,7 @@ export const submit = mutation({
       const progress = await ctx.db
         .query("studentTopicProgress")
         .withIndex("by_studentId_topicId", (q) =>
-          q.eq("studentId", args.studentId).eq("topicId", exercise.topicId),
+          q.eq("studentId", studentId).eq("topicId", exercise.topicId),
         )
         .first();
 
@@ -260,7 +284,7 @@ export const submit = mutation({
         });
       } else {
         await ctx.db.insert("studentTopicProgress", {
-          studentId: args.studentId,
+          studentId,
           topicId: exercise.topicId,
           completedExercises: 1,
           correctExercises: 1,
@@ -271,7 +295,30 @@ export const submit = mutation({
 
       // Check and award badges in real-time
       await ctx.scheduler.runAfter(0, internal.badges.checkAndAward, {
-        studentId: args.studentId,
+        studentId,
+      });
+    }
+
+    // Redesign Gaming G7 — daily quest progress (same semantics as
+    // palierAttempts.verifyAttempt: first try = effort, first correct = win).
+    const questEvents: {
+      type: "exercise_attempted" | "exercise_correct";
+      subjectId?: Id<"subjects">;
+    }[] = [];
+    if (previous.length === 0) {
+      const topic = await ctx.db.get(exercise.topicId);
+      questEvents.push({
+        type: "exercise_attempted",
+        subjectId: topic?.subjectId,
+      });
+    }
+    if (isCorrect && !hadCorrectBefore) {
+      questEvents.push({ type: "exercise_correct" });
+    }
+    if (questEvents.length > 0) {
+      await ctx.runMutation(internal.quests.recordActivity, {
+        studentId,
+        events: questEvents,
       });
     }
 
@@ -348,6 +395,13 @@ export const markAttemptCorrectByAI = internalMutation({
         masteryLevel: 0,
       });
     }
+
+    // Redesign Gaming G7 — an AI-validated answer counts as a bonne réponse
+    // for the daily quests, like a direct correct in verifyAttempt.
+    await ctx.runMutation(internal.quests.recordActivity, {
+      studentId: attempt.studentId,
+      events: [{ type: "exercise_correct" }],
+    });
   },
 });
 
@@ -357,14 +411,23 @@ export const markAttemptCorrectByAI = internalMutation({
 
 export const getAttemptsForExercise = query({
   args: {
-    studentId: v.id("profiles"),
     exerciseId: v.id("exercises"),
   },
   handler: async (ctx, args) => {
+    // Security — scoped to the authenticated student (the old `studentId`
+    // argument let any user read another student's attempts).
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") return [];
+
     return await ctx.db
       .query("attempts")
       .withIndex("by_studentId_exerciseId", (q) =>
-        q.eq("studentId", args.studentId).eq("exerciseId", args.exerciseId),
+        q.eq("studentId", profile._id).eq("exerciseId", args.exerciseId),
       )
       .take(100);
   },

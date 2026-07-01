@@ -160,6 +160,29 @@ export const verifyAttempt = mutation({
       palierAttemptId: args.palierAttemptId,
     });
 
+    // Redesign Gaming G7 — daily quest progress. First try on this exo counts
+    // as "exercise done" (effort), first correct as "bonne réponse".
+    const questEvents: {
+      type: "exercise_attempted" | "exercise_correct";
+      subjectId?: Id<"subjects">;
+    }[] = [];
+    if (attemptNumber === 1) {
+      const palier = await ctx.db.get(attempt.palierId);
+      questEvents.push({
+        type: "exercise_attempted",
+        subjectId: palier?.subjectId,
+      });
+    }
+    if (isCorrect && !previous.some((p) => p.isCorrect)) {
+      questEvents.push({ type: "exercise_correct" });
+    }
+    if (questEvents.length > 0) {
+      await ctx.runMutation(internal.quests.recordActivity, {
+        studentId: profile._id,
+        events: questEvents,
+      });
+    }
+
     // Server-only feedback. We DO NOT return the correct answer — Decision 61.
     return {
       isCorrect,
@@ -305,6 +328,15 @@ export const submitPalier = mutation({
     await ctx.runMutation(internal.streak.recordKidActivity, {
       studentId: profile._id,
     });
+
+    // Redesign Gaming G7 — a validated palier advances the matching quest
+    // (no-op if daily missions are parent-disabled).
+    if (isValidated) {
+      await ctx.runMutation(internal.quests.recordActivity, {
+        studentId: profile._id,
+        events: [{ type: "palier_validated" }],
+      });
+    }
 
     // Cumulative regen check (Decision 60) — UI uses canRegen flag.
     const history = await ctx.db

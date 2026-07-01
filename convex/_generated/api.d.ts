@@ -35,6 +35,7 @@ import type * as pdfUploads from "../pdfUploads.js";
 import type * as pdfUploadsExtract from "../pdfUploadsExtract.js";
 import type * as profiles from "../profiles.js";
 import type * as progress from "../progress.js";
+import type * as quests from "../quests.js";
 import type * as regenNotificationEmail from "../regenNotificationEmail.js";
 import type * as reports from "../reports.js";
 import type * as reportsEmail from "../reportsEmail.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   pdfUploadsExtract: typeof pdfUploadsExtract;
   profiles: typeof profiles;
   progress: typeof progress;
+  quests: typeof quests;
   regenNotificationEmail: typeof regenNotificationEmail;
   reports: typeof reports;
   reportsEmail: typeof reportsEmail;

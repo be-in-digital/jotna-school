@@ -449,6 +449,38 @@ export default defineSchema({
     .index("by_studentId", ["studentId"]),
 
   // ---------------------------------------------------------------------------
+  // dailyQuests — Redesign Gaming G7/G10 (tasks/redesign-gaming.md)
+  // One row per (student, day). The quests array is BOUNDED (1 cold-start
+  // quest or 3 regular quests), so embedding it is schema-guideline safe.
+  // Lifetime reward aggregate lives in profiles.preferences.questBonusStars
+  // (single read in getMyStats, no unbounded scan).
+  // ---------------------------------------------------------------------------
+  dailyQuests: defineTable({
+    studentId: v.id("profiles"),
+    dayKey: v.string(), // YYYY-MM-DD, same clock basis as streak.todayYmd()
+    quests: v.array(
+      v.object({
+        key: v.string(), // unique within the day (= type in v1)
+        type: v.union(
+          v.literal("do_exercises"),
+          v.literal("correct_answers"),
+          v.literal("validate_palier"),
+          v.literal("subject_exercises"),
+        ),
+        label: v.string(),
+        target: v.number(),
+        progress: v.number(),
+        reward: v.number(), // étoiles bonus awarded on completion
+        subjectId: v.optional(v.id("subjects")),
+        subjectName: v.optional(v.string()),
+        completedAt: v.optional(v.number()),
+      }),
+    ),
+    createdAt: v.number(),
+    allCompletedAt: v.optional(v.number()),
+  }).index("by_student_day", ["studentId", "dayKey"]),
+
+  // ---------------------------------------------------------------------------
   // parentSettings
   // Per-kid wellbeing toggles, owned by the parent profile. Decision 84
   // ---------------------------------------------------------------------------

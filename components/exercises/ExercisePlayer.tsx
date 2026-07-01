@@ -164,9 +164,9 @@ export default function ExercisePlayer({
     const timeSpentMs = Date.now() - exerciseStartTime.current;
 
     try {
+      // Security — the server derives the student from auth; no studentId.
       let result = await submitAttempt({
         exerciseId: currentExercise._id as Id<"exercises">,
-        studentId: studentId as Id<"profiles">,
         submittedAnswer: answer,
         attemptNumber: newAttemptCount,
         hintsUsedCount: hintsRevealed,
