@@ -90,14 +90,15 @@ export default function StudentBadgesPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-extrabold text-gray-900">
-          Mon coffre
+      {/* Header — Redesign Gaming : la salle des trophées du camp */}
+      <div className="mb-6 text-center sm:text-left">
+        <h1 className="font-game text-2xl font-bold text-amber-950 sm:text-3xl">
+          Salle des trophées
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-amber-900/70">
           {earnedCount}/{totalCount} badge{totalCount > 1 ? "s" : ""}
-          {earnedCount > 0 ? " obtenu" + (earnedCount > 1 ? "s" : "") : ""}
+          {earnedCount > 0 ? " obtenu" + (earnedCount > 1 ? "s" : "") : ""} —
+          continue l&apos;aventure pour remplir les étagères !
         </p>
       </div>
 

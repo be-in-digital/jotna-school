@@ -81,6 +81,10 @@ export default function StudentProfilePage() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Avatar + level ring */}
+      {/* Redesign Gaming — le carnet de l'aventurier */}
+      <p className="mb-4 text-center font-game text-sm font-bold uppercase tracking-widest text-amber-700/80">
+        Carnet de l&apos;aventurier
+      </p>
       <div className="mb-8 flex flex-col items-center">
         <LevelRing progressPct={xpProgress}>
           {stats.student.avatar ? (
@@ -103,7 +107,7 @@ export default function StudentProfilePage() {
           Niveau {stats.level ?? 1}
         </span>
 
-        <h1 className="font-display mt-3 text-2xl font-extrabold text-gray-900">
+        <h1 className="mt-3 font-game text-2xl font-bold text-amber-950">
           {stats.student.name}
         </h1>
 

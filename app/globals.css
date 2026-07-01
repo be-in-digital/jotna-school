@@ -46,6 +46,9 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Redesign Gaming — Fredoka (D16) exposed as the `font-game` utility for
+     all /student/* game surfaces (headings, buttons, HUD). */
+  --font-game: var(--font-display);
 }
 
 :root {
@@ -89,6 +92,31 @@
 @keyframes legendaryPulse {
   0%, 100% { box-shadow: 0 0 20px 4px rgba(251,191,36,0.35); }
   50% { box-shadow: 0 0 28px 8px rgba(251,191,36,0.5); }
+}
+
+/* Redesign Gaming — ambient world motion. All consumers are wrapped in the
+   student MotionConfig; these CSS animations are additionally disabled by the
+   media query below (D12). */
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-4%); }
+  to { transform: translateX(4%); }
+}
+@keyframes sunPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[gentleBob_3s_ease-in-out_infinite\],
+  [class*="gentleBob"],
+  [class*="cloudDrift"],
+  [class*="sunPulse"] {
+    animation: none !important;
+  }
 }
 
 @layer base {

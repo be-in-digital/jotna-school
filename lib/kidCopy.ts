@@ -67,6 +67,31 @@ export const kidMessages = {
 
   // Footer / mention programme officiel (Decision 91 — pour parent dashboard)
   inspiredByProgram: 'Inspiré du programme officiel sénégalais',
+
+  // Redesign Gaming — bulles de Pio sur le hub (camp de Pio)
+  pioHub: {
+    welcome: "Bienvenue dans mon camp ! Prêt pour l'aventure ?",
+    allQuestsDone: 'Waouh ! Toutes tes missions sont finies ! 🎉',
+    oneQuestLeft: "Plus qu'une mission et c'est gagné !",
+    streak: (n: number) => `${n} jours d'affilée, quelle série ! 🔥`,
+    daily: [
+      'Alors, on apprend quoi aujourd\'hui ?',
+      'Je crois en toi, comme toujours !',
+      'Le baobab a encore grandi cette nuit !',
+      'Un petit exercice pour commencer ?',
+      'Tu deviens plus fort chaque jour !',
+      'La savane est belle aujourd\'hui, non ?',
+    ],
+    tapReactions: ['Hihi !', 'Coucou !', 'Encore !', 'Ça chatouille !'],
+    secret: 'Waouh, tu m\'as trouvé ! Tu es trop fort ! ⭐',
+  },
+
+  // Redesign Gaming — plateau de missions du jour
+  questBoard: {
+    title: 'Missions du jour',
+    allDone: 'Toutes les missions sont terminées, à demain ! 🌙',
+    loading: 'Pio prépare tes missions...',
+  },
 } as const;
 
 export type KidMessages = typeof kidMessages;

@@ -1,269 +1,154 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import Link from "next/link";
-import { Loader2, BookOpen, Flame } from "lucide-react";
-import { motion } from "framer-motion";
-import { Pio } from "@/components/student/pio";
-
-const iconMap: Record<string, React.ReactNode> = {
-  Calculator: <span className="text-3xl">🧮</span>,
-  Book: <span className="text-3xl">📖</span>,
-  Flask: <span className="text-3xl">🔬</span>,
-  Globe: <span className="text-3xl">🌍</span>,
-  Music: <span className="text-3xl">🎵</span>,
-  Palette: <span className="text-3xl">🎨</span>,
-  Code: <span className="text-3xl">💻</span>,
-  Hash: <span className="text-3xl">#</span>,
-};
-
-export default function StudentHomePage() {
-  const subjects = useQuery(api.subjects.list);
-  const stats = useQuery(api.students.getMyStats);
-
-  if (subjects === undefined || stats === undefined) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-        <span className="ml-3 text-gray-500">Chargement...</span>
-      </div>
-    );
-  }
-
-  // D8 — true cold-start: brand new account, zero progress everywhere.
-  // We hide stats surfaces and show a single warm welcome + first-step CTA
-  // so the screen doesn't read as "you have nothing yet".
-  const isColdStart =
-    stats !== null &&
-    (stats.totalExercises ?? 0) === 0 &&
-    (stats.totalStars ?? 0) === 0 &&
-    (!stats.streaksEnabled || (stats.currentStreak ?? 0) === 0);
-
-  const firstName = (stats?.student.name ?? "").split(" ")[0] || "";
-  const showStreakRibbon =
-    stats?.streaksEnabled === true && (stats.currentStreak ?? 0) > 0;
-
-  return (
-    <div className="space-y-8">
-      {/* Welcome zone — Pio greets the student by name */}
-      <WelcomeBanner
-        firstName={firstName}
-        isColdStart={isColdStart}
-        currentStreak={stats?.currentStreak ?? 0}
-        streakActive={showStreakRibbon}
-      />
-
-      {/* D7 — 7-day streak ribbon (only when parent toggle is on AND there's a streak) */}
-      {showStreakRibbon && stats && (
-        <StreakRibbon
-          currentStreak={stats.currentStreak}
-          longestStreak={stats.longestStreak}
-        />
-      )}
-
-      {/* Subjects grid — "mes mondes" */}
-      <div>
-        <h2 className="font-display mb-4 flex items-center gap-2 text-2xl font-extrabold text-gray-900">
-          <BookOpen className="h-7 w-7 text-amber-600" aria-hidden />
-          Mes matières
-        </h2>
-
-        {subjects.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
-            <p className="text-lg font-medium text-gray-500">
-              Aucune matière disponible pour le moment.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {subjects.map((subject) => (
-              <Link
-                key={subject._id}
-                href={`/student/subjects/${subject._id}`}
-                className="group rounded-3xl border-2 border-transparent bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl focus-visible:scale-[1.02] focus-visible:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2"
-                style={{ boxShadow: `0 4px 20px ${subject.color}20` }}
-              >
-                <div
-                  className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg"
-                  style={{ backgroundColor: subject.color }}
-                >
-                  {iconMap[subject.icon] || (
-                    <span className="text-2xl font-bold">
-                      {subject.icon.slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="font-display text-xl font-extrabold text-gray-900 group-hover:text-gray-700">
-                  {subject.name}
-                </h3>
-                <p className="mt-1 text-sm font-medium text-gray-500">
-                  Commence ton aventure
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function WelcomeBanner({
-  firstName,
-  isColdStart,
-  currentStreak,
-  streakActive,
-}: {
-  firstName: string;
-  isColdStart: boolean;
-  currentStreak: number;
-  streakActive: boolean;
-}) {
-  const greeting = isColdStart
-    ? `Bienvenue${firstName ? `, ${firstName}` : ""} ! 👋`
-    : `Bon retour${firstName ? `, ${firstName}` : ""} !`;
-
-  const subline = isColdStart
-    ? "Choisis ta première matière pour commencer ton aventure."
-    : streakActive
-      ? `Bravo, tu as ${currentStreak} jour${currentStreak > 1 ? "s" : ""} de série.`
-      : "Prêt(e) à apprendre aujourd'hui ?";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 p-6 text-white shadow-xl sm:p-8"
-    >
-      <div className="flex items-center gap-4 sm:gap-6">
-        <Pio
-          state={isColdStart ? "hello" : streakActive ? "cheer" : "idle"}
-          size={88}
-          className="shrink-0 drop-shadow-lg"
-        />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-extrabold sm:text-3xl">
-            {greeting}
-          </h1>
-          <p className="mt-1.5 text-base opacity-95 sm:text-lg">{subline}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+import { Play, Map as MapIcon, Sparkles } from "lucide-react";
+import { SavannaScene } from "@/components/student/world/savanna-scene";
+import { PioStage } from "@/components/student/game/pio-stage";
+import { QuestBoard } from "@/components/student/game/quest-board";
+import { GameLinkButton } from "@/components/student/game/game-button";
+import { useDeviceTier } from "@/hooks/use-device-tier";
 
 /**
- * D7 — 7-day visual streak ribbon. Shows the current calendar week (Mon → Sun)
- * with each day in one of three states:
- *   - active : within the running streak
- *   - today  : today, highlighted regardless of activity (kid sees "where I am")
- *   - empty  : outside the streak window
- *
- * D7c — zero-shame copy. Never says "perdu" — even broken streaks just fade.
+ * Redesign Gaming — LE HUB : le camp de Pio (tasks/redesign-gaming.md §4).
+ * Boucle quotidienne : Pio accueille → missions du jour → « Continuer
+ * l'aventure » reprend exactement où l'élève s'était arrêté.
+ * D8 — cold start : pas de compteurs à zéro, une bulle d'accueil et un CTA
+ * « Commencer l'aventure ».
  */
-function StreakRibbon({
-  currentStreak,
-  longestStreak,
-}: {
-  currentStreak: number;
-  longestStreak: number;
-}) {
-  // Compute the current week (Monday-anchored) as 7 Date objects.
-  const today = new Date();
-  const todayDow = (today.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - todayDow);
-  monday.setHours(0, 0, 0, 0);
+export default function StudentHomePage() {
+  const stats = useQuery(api.students.getMyStats);
+  const resume = useQuery(api.students.getMyResumeTarget);
+  const daily = useQuery(api.quests.getMyDaily);
+  // G5 — lite devices get the same world, fully static (zero animation cost).
+  const tier = useDeviceTier();
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
+  // Teinte du soir (18h–6h locale) — appliquée après hydratation pour éviter
+  // tout mismatch SSR/client ; différée d'un tick (lint set-state-in-effect),
+  // invisible derrière la transition d'opacité d'une seconde.
+  const [evening, setEvening] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const hour = new Date().getHours();
+      setEvening(hour >= 18 || hour < 6);
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Determine which days are within the active streak (going back from today).
-  const streakStart = new Date(today);
-  streakStart.setDate(today.getDate() - (currentStreak - 1));
-  streakStart.setHours(0, 0, 0, 0);
-
-  const dayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+  const loaded = stats !== undefined && resume !== undefined;
+  const coldStart = Boolean(stats && stats.totalExercises === 0);
+  const questsDone =
+    daily?.enabled && daily.quests
+      ? daily.quests.filter((q) => q.completedAt).length
+      : undefined;
+  const questsTotal =
+    daily?.enabled && daily.quests ? daily.quests.length : undefined;
 
   return (
-    <div className="rounded-2xl border-2 border-orange-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Flame
-            className="h-5 w-5 fill-orange-500 text-orange-500"
-            aria-hidden
-          />
-          <span className="font-display text-lg font-bold text-gray-900">
-            {currentStreak} jour{currentStreak > 1 ? "s" : ""} de série
+    <div className="space-y-5 sm:space-y-6">
+      <h1 className="sr-only">Le camp de Pio</h1>
+
+      {/* ------------------------------------------------ the world stage */}
+      <section
+        aria-label="Le camp de Pio"
+        className="relative h-[27rem] overflow-hidden rounded-[2rem] border-2 border-white/70 shadow-xl shadow-amber-900/10 sm:h-[30rem] sm:rounded-[2.5rem]"
+      >
+        {/* sky backdrop behind the SVG horizon */}
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-300 via-sky-200 to-amber-100" />
+        {/* portrait composition on phones so the camp landmarks (baobab,
+            cabane) stay in frame; wide composition from sm: up. */}
+        <SavannaScene
+          composition="portrait"
+          className="absolute inset-0 h-full w-full sm:hidden"
+          animated={tier === "full"}
+        />
+        <SavannaScene
+          composition="wide"
+          className="absolute inset-0 hidden h-full w-full sm:block"
+          animated={tier === "full"}
+        />
+
+        {/* evening mood — pure CSS overlay */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-indigo-400/30 via-transparent to-rose-300/25 transition-opacity duration-1000 ${
+            evening ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {/* wooden sign */}
+        <div className="absolute left-4 top-4 rounded-2xl border-2 border-amber-800 bg-gradient-to-b from-amber-600 to-amber-700 px-4 py-1.5 shadow-md sm:left-6 sm:top-6">
+          <span className="font-game text-sm font-bold text-amber-50 sm:text-base">
+            Le camp de Pio
           </span>
         </div>
-        {longestStreak > currentStreak && (
-          <span className="text-xs font-medium text-gray-500">
-            record : {longestStreak}
-          </span>
+
+        {/* level chip — hidden on cold start (D8) */}
+        {stats && !coldStart && (
+          <div className="absolute right-4 top-4 rounded-full border-2 border-white/70 bg-white/85 px-3.5 py-1.5 shadow-md backdrop-blur-sm sm:right-6 sm:top-6">
+            <span className="font-game text-sm font-bold text-amber-900">
+              Niveau {stats.level}
+            </span>
+          </div>
         )}
-      </div>
 
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-        {days.map((d, i) => {
-          const dDay = new Date(d);
-          dDay.setHours(0, 0, 0, 0);
-          const todayDay = new Date(today);
-          todayDay.setHours(0, 0, 0, 0);
-          const isToday = dDay.getTime() === todayDay.getTime();
-          const isActive =
-            dDay.getTime() >= streakStart.getTime() &&
-            dDay.getTime() <= todayDay.getTime();
+        {/* Pio + CTA anchored to the grass */}
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 pb-6 sm:pb-8">
+          {loaded ? (
+            <PioStage
+              context={{
+                coldStart,
+                questsDone,
+                questsTotal,
+                streak: stats?.streaksEnabled ? stats.currentStreak : 0,
+              }}
+            />
+          ) : (
+            <div className="h-[190px]" aria-hidden />
+          )}
 
-          return (
-            <div
-              key={i}
-              className="flex flex-1 flex-col items-center gap-1.5"
-              aria-label={
-                isActive
-                  ? `${dayLabels[i]} actif`
-                  : isToday
-                    ? `${dayLabels[i]} aujourd'hui`
-                    : `${dayLabels[i]} en pause`
-              }
-            >
-              <span
-                className={`text-xs font-semibold ${
-                  isToday ? "text-orange-700" : "text-gray-500"
-                }`}
-              >
-                {dayLabels[i]}
-              </span>
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors sm:h-10 sm:w-10 ${
-                  isActive
-                    ? "border-orange-300 bg-orange-100 text-orange-600"
-                    : isToday
-                      ? "border-orange-400 bg-white text-orange-400"
-                      : "border-gray-200 bg-gray-50 text-gray-300"
-                }`}
-              >
-                {isActive ? (
-                  <Flame
-                    className="h-4 w-4 fill-orange-500 text-orange-500"
-                    aria-hidden
-                  />
-                ) : isToday ? (
-                  <span className="text-base font-bold">·</span>
-                ) : (
-                  <span className="text-xs">·</span>
-                )}
+          {loaded ? (
+            resume ? (
+              <div className="flex flex-col items-center gap-2 px-4">
+                <GameLinkButton
+                  href={`/student/topics/${resume.topicId}/session?palier=${resume.palierIndex}`}
+                  size="lg"
+                  className="min-w-[16rem]"
+                >
+                  <Play className="h-5 w-5 fill-current" aria-hidden />
+                  Continuer l&apos;aventure
+                </GameLinkButton>
+                <span className="max-w-[20rem] truncate rounded-full bg-white/80 px-3 py-1 text-center text-sm font-semibold text-amber-900/80 backdrop-blur-sm">
+                  {resume.subjectName} · {resume.topicName} · Palier{" "}
+                  {resume.palierIndex}
+                </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            ) : (
+              <GameLinkButton
+                href="/student/map"
+                size="lg"
+                className="min-w-[16rem]"
+              >
+                {coldStart ? (
+                  <Sparkles className="h-5 w-5" aria-hidden />
+                ) : (
+                  <MapIcon className="h-5 w-5" aria-hidden />
+                )}
+                {coldStart ? "Commencer l'aventure" : "Choisir une aventure"}
+              </GameLinkButton>
+            )
+          ) : (
+            <div
+              className="h-14 w-64 animate-pulse rounded-3xl bg-white/60"
+              aria-hidden
+            />
+          )}
+        </div>
+      </section>
+
+      {/* ------------------------------------------------ missions du jour */}
+      <QuestBoard />
     </div>
   );
 }

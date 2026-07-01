@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import Link from "next/link";
 import {
   Star,
   Clock,
@@ -18,6 +17,8 @@ import { Pio } from "@/components/student/pio";
 import { SoundOptInDialog } from "@/components/student/sound-opt-in-dialog";
 import { LevelUpOverlay } from "@/components/student/level-up-overlay";
 import { BadgeShield } from "@/components/student/badge-icon";
+import { QuestBoard } from "@/components/student/game/quest-board";
+import { GameLinkButton } from "@/components/student/game/game-button";
 import {
   hasOptInBeenAsked,
   playBadge,
@@ -66,6 +67,11 @@ export default function TopicCompletePage({
   // useEffect+setState pattern would trigger (lint react-hooks/set-state-in-effect).
   const [stats] = useState<SessionStats | null>(() => readSessionStats(id));
   const myStats = useQuery(api.students.getMyStats);
+  // Redesign Gaming — the loop goes back to the subject's trail on the map.
+  const topic = useQuery(api.topics.getById, { id: id as Id<"topics"> });
+  const mapHref = topic?.subjectId
+    ? `/student/map/${topic.subjectId}`
+    : "/student/map";
   const markBadgesSeen = useMutation(api.badges.markBadgesSeen);
   const markLevelSeen = useMutation(api.students.markLevelSeen);
 
@@ -181,16 +187,13 @@ export default function TopicCompletePage({
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-20">
         <Pio state="cheer" size={120} />
-        <h1 className="font-display text-3xl font-extrabold text-gray-900">
+        <h1 className="font-game text-3xl font-extrabold text-gray-900">
           Bravo !
         </h1>
         <p className="text-gray-500">Session terminée.</p>
-        <Link
-          href="/student/home"
-          className="rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-bold text-white shadow-lg"
-        >
-          Retour à l&apos;accueil
-        </Link>
+        <GameLinkButton href={mapHref} size="lg">
+          Retour à la carte
+        </GameLinkButton>
       </div>
     );
   }
@@ -223,7 +226,7 @@ export default function TopicCompletePage({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500 p-6 text-center text-white shadow-xl sm:p-8"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-400 via-amber-400 to-lime-500 p-6 text-center text-white shadow-xl sm:p-8"
       >
         <div className="mx-auto mb-2 flex justify-center">
           <Pio state="cheer" size={104} className="drop-shadow-lg" />
@@ -358,22 +361,24 @@ export default function TopicCompletePage({
         </motion.div>
       )}
 
+      {/* Redesign Gaming — missions du jour : l'élève voit sa session faire
+          avancer ses quêtes juste après l'effort (boucle de jeu §3). */}
+      <QuestBoard />
+
       {/* Action buttons */}
       <div className="space-y-3">
-        <Link
+        <GameLinkButton
           href={`/student/topics/${id}/session`}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-gray-200 bg-white px-6 py-4 text-lg font-bold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md"
+          variant="ghost"
+          className="w-full"
         >
           <RotateCcw className="h-5 w-5" aria-hidden />
           Revoir mes erreurs
-        </Link>
-        <Link
-          href="/student/home"
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
-        >
-          Thématique suivante
+        </GameLinkButton>
+        <GameLinkButton href={mapHref} size="lg" className="w-full">
+          Continuer l&apos;aventure
           <ArrowRight className="h-5 w-5" aria-hidden />
-        </Link>
+        </GameLinkButton>
       </div>
 
       {/* D20 — Sound opt-in dialog, deferred after hero animation */}
