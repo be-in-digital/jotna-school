@@ -9,6 +9,29 @@ export const list = query({
   },
 });
 
+/**
+ * Subjects + count of topics per subject. Used by the student home page to
+ * show "X exercices" on each subject card. Cheap: one indexed scan per
+ * subject (≤ 8 by default), capped at 200 topics each.
+ */
+export const listWithCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const subjects = await ctx.db.query("subjects").take(50);
+    const sorted = subjects.sort((a, b) => a.order - b.order);
+    const withCounts = await Promise.all(
+      sorted.map(async (s) => {
+        const topics = await ctx.db
+          .query("topics")
+          .withIndex("by_subjectId", (q) => q.eq("subjectId", s._id))
+          .take(200);
+        return { ...s, topicCount: topics.length };
+      }),
+    );
+    return withCounts;
+  },
+});
+
 export const getById = query({
   args: { id: v.id("subjects") },
   handler: async (ctx, args) => {
