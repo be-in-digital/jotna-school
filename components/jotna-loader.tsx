@@ -2,19 +2,24 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { Pio } from "@/components/student/pio";
 import { kidMessages } from "@/lib/kidCopy";
 
 /**
- * Loader kid-friendly avec animation baobab + messages rotatifs.
+ * Loader kid-friendly — Pio l'explorateur cherche les exercices à la loupe.
  * Decision 86 (UA M3) — affiché pour toutes attentes IA > 500ms.
+ *
+ * Pio reste immobile (décision utilisateur : aucune animation du corps) ;
+ * la vie vient du halo doux derrière lui, des points rebondissants et des
+ * messages rotatifs.
  *
  * Usage:
  *   <JotnaLoader message="Aïssatou prépare tes exos..." />
- *   <JotnaLoader />  // utilise messages rotatifs
+ *   <JotnaLoader />  // messages rotatifs
  */
 export function JotnaLoader({
   message,
-  size = 120,
+  size = 150,
   className = "",
 }: {
   message?: string;
@@ -35,96 +40,35 @@ export function JotnaLoader({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-4 py-8 ${className}`}
+      className={`flex flex-col items-center justify-center gap-4 py-10 ${className}`}
     >
-      <motion.svg
-        width={size}
-        height={size}
-        viewBox="0 0 120 120"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: [0.95, 1.05, 0.95] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-        aria-label="Baobab loader"
-      >
-        {/* Baobab tronc */}
-        <motion.rect
-          x="48"
-          y="60"
-          width="24"
-          height="50"
-          rx="4"
-          fill="#92400e"
+      {/* Pio l'explorateur, posé sur un halo doux (statique) */}
+      <div className="relative flex items-end justify-center">
+        <span
+          aria-hidden
+          className="absolute bottom-1 h-[38%] w-[130%] rounded-[100%] bg-amber-300/40 blur-xl"
         />
-        {/* Branches */}
-        <motion.path
-          d="M 60 60 Q 30 50 25 35"
-          stroke="#92400e"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
+        <Pio state="think" size={size} className="relative drop-shadow-md" />
+        <span
+          aria-hidden
+          className="absolute -bottom-1 h-3 w-[55%] rounded-[100%] bg-amber-900/15 blur-[2px]"
         />
-        <motion.path
-          d="M 60 60 Q 90 50 95 35"
-          stroke="#92400e"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <motion.path
-          d="M 60 55 L 60 25"
-          stroke="#92400e"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-        />
-        {/* Feuillage animé */}
-        <motion.circle
-          cx="25"
-          cy="30"
-          r="14"
-          fill="#22c55e"
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0 }}
-        />
-        <motion.circle
-          cx="60"
-          cy="22"
-          r="16"
-          fill="#16a34a"
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-        />
-        <motion.circle
-          cx="95"
-          cy="30"
-          r="14"
-          fill="#22c55e"
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-        />
-        {/* Petits fruits */}
-        <motion.circle
-          cx="50"
-          cy="40"
-          r="3"
-          fill="#f59e0b"
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-        <motion.circle
-          cx="72"
-          cy="38"
-          r="3"
-          fill="#f59e0b"
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-        />
-      </motion.svg>
+      </div>
+
+      {/* points rebondissants aux couleurs du monde */}
+      <div className="flex items-center gap-2" aria-hidden>
+        <span className="inline-block h-3.5 w-3.5 animate-bounce rounded-full bg-amber-400 [animation-delay:0ms]" />
+        <span className="inline-block h-3.5 w-3.5 animate-bounce rounded-full bg-orange-500 [animation-delay:150ms]" />
+        <span className="inline-block h-3.5 w-3.5 animate-bounce rounded-full bg-lime-500 [animation-delay:300ms]" />
+        <span className="inline-block h-3.5 w-3.5 animate-bounce rounded-full bg-sky-400 [animation-delay:450ms]" />
+      </div>
+
       <motion.p
         key={displayMessage}
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-sm font-medium text-gray-600 text-center max-w-xs"
+        className="max-w-xs text-center font-game text-sm font-semibold text-amber-900/80"
+        role="status"
       >
         {displayMessage}
       </motion.p>
