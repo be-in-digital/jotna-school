@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Loader2, Lock, Sparkles } from "lucide-react";
+import { Loader2, Lock, Sparkles, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   getRarityChipClass,
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BadgeShield } from "@/components/student/badge-icon";
+import { GamePanel } from "@/components/student/game/game-panel";
 
 type Tab = "all" | "earned" | "locked";
 
@@ -88,22 +89,41 @@ export default function StudentBadgesPage() {
     return true;
   });
 
+  const collectionPct =
+    totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0;
+
   return (
-    <div>
-      {/* Header — Redesign Gaming : la salle des trophées du camp */}
-      <div className="mb-6 text-center sm:text-left">
-        <h1 className="font-game text-2xl font-bold text-amber-950 sm:text-3xl">
-          Salle des trophées
-        </h1>
-        <p className="mt-1 text-sm text-amber-900/70">
-          {earnedCount}/{totalCount} badge{totalCount > 1 ? "s" : ""}
-          {earnedCount > 0 ? " obtenu" + (earnedCount > 1 ? "s" : "") : ""} —
-          continue l&apos;aventure pour remplir les étagères !
-        </p>
-      </div>
+    <div className="space-y-6">
+      {/* Trophy-case banner — collection progress, wood header vibe */}
+      <GamePanel variant="board" className="overflow-hidden">
+        <div className="flex items-center gap-3 border-b-2 border-amber-800 bg-gradient-to-b from-amber-600 to-amber-700 px-5 py-3">
+          <Trophy className="h-6 w-6 text-amber-100" aria-hidden />
+          <h1 className="font-game text-xl font-bold text-amber-50 sm:text-2xl">
+            Salle des trophées
+          </h1>
+        </div>
+        <div className="p-5">
+          <div className="flex items-end justify-between gap-3">
+            <p className="font-game text-sm font-semibold text-amber-900/80">
+              {earnedCount === 0
+                ? "Ta vitrine attend son premier trophée !"
+                : `${earnedCount} trophée${earnedCount > 1 ? "s" : ""} dans ta vitrine`}
+            </p>
+            <span className="font-game text-lg font-bold text-amber-700">
+              {earnedCount}/{totalCount}
+            </span>
+          </div>
+          <div className="mt-2 h-3 overflow-hidden rounded-full bg-amber-100">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-[width] duration-700"
+              style={{ width: `${collectionPct}%` }}
+            />
+          </div>
+        </div>
+      </GamePanel>
 
       {/* D10 — Tabs : Tous / Obtenus / Verrouillés */}
-      <div className="mb-6 flex gap-2" role="tablist" aria-label="Filtre des badges">
+      <div className="flex gap-2" role="tablist" aria-label="Filtre des badges">
         <TabPill
           isActive={tab === "all"}
           onClick={() => setTab("all")}
@@ -125,13 +145,13 @@ export default function StudentBadgesPage() {
       </div>
 
       {visibleBadges.length === 0 ? (
-        <div className="rounded-3xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-12 text-center">
-          <p className="text-gray-500">
+        <div className="rounded-3xl border-2 border-dashed border-amber-300 bg-white/70 p-12 text-center">
+          <p className="font-game font-semibold text-amber-900">
             {tab === "earned"
-              ? "Aucun badge obtenu pour l'instant. Continue tes exercices !"
+              ? "Ta vitrine est encore vide — pars gagner ton premier trophée !"
               : tab === "locked"
-                ? "Tu as déballé tous les badges, bravo !"
-                : "Aucun badge disponible pour le moment."}
+                ? "Tu as gagné tous les trophées, champion ! 🏆"
+                : "Aucun trophée disponible pour le moment."}
           </p>
         </div>
       ) : (
@@ -152,7 +172,11 @@ export default function StudentBadgesPage() {
                 whileTap={{ scale: 0.97 }}
                 transition={{ type: "spring", stiffness: 320, damping: 18 }}
                 style={isEarned ? getRarityGlowStyle(badge.rarity) : undefined}
-                className={`group relative flex min-h-48 flex-col items-center justify-between gap-3 overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 text-center shadow-[0_4px_16px_-6px_rgba(15,23,42,0.12)] transition-shadow hover:shadow-[0_8px_22px_-6px_rgba(15,23,42,0.18)] sm:p-5 ${isEarned ? getRarityRingClass(badge.rarity) : ""}`}
+                className={`group relative flex min-h-48 flex-col items-center justify-between gap-3 overflow-hidden rounded-3xl border-2 p-4 text-center shadow-[0_4px_0_rgba(217,119,6,0.15)] transition-shadow sm:p-5 ${
+                  isEarned
+                    ? `border-amber-200 bg-white/95 ${getRarityRingClass(badge.rarity)}`
+                    : "border-stone-200 bg-stone-50/80"
+                }`}
                 aria-label={
                   isEarned
                     ? `${badge.name} — obtenu`
@@ -186,8 +210,8 @@ export default function StudentBadgesPage() {
 
                 <div className="flex flex-col gap-1">
                   <p
-                    className={`font-display text-sm font-extrabold ${
-                      isEarned ? "text-gray-900" : "text-slate-700"
+                    className={`font-game text-sm font-bold ${
+                      isEarned ? "text-amber-950" : "text-stone-500"
                     }`}
                   >
                     {badge.name}
@@ -281,16 +305,16 @@ function TabPill({
       onClick={onClick}
       role="tab"
       aria-selected={isActive}
-      className={`flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+      className={`flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2 font-game text-sm font-semibold transition-all ${
         isActive
           ? "bg-orange-500 text-white shadow-md shadow-orange-200"
-          : "bg-white text-gray-600 hover:bg-amber-50"
+          : "border-2 border-amber-200 bg-white/90 text-amber-900/80 hover:bg-amber-50"
       }`}
     >
       <span>{label}</span>
       <span
         className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs ${
-          isActive ? "bg-white/20" : "bg-gray-100"
+          isActive ? "bg-white/20" : "bg-amber-100"
         }`}
       >
         {count}
