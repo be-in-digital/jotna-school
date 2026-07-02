@@ -97,8 +97,9 @@ export default function StudentHomePage() {
           </div>
         )}
 
-        {/* Pio + CTA anchored to the grass */}
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 pb-6 sm:pb-8">
+        {/* Pio — feet ON the grass line, independent from the CTA layer so
+            he never floats mid-sky (the old stacked column pushed him up). */}
+        <div className="absolute inset-x-0 bottom-[6.75rem] flex justify-center sm:bottom-[7.5rem]">
           {loaded ? (
             <PioStage
               context={{
@@ -111,10 +112,13 @@ export default function StudentHomePage() {
           ) : (
             <div className="h-[190px]" aria-hidden />
           )}
+        </div>
 
+        {/* CTA layer — sits on the foreground grass, in front of Pio */}
+        <div className="absolute inset-x-0 bottom-5 flex flex-col items-center gap-2 px-4 sm:bottom-7">
           {loaded ? (
             resume ? (
-              <div className="flex flex-col items-center gap-2 px-4">
+              <>
                 <GameLinkButton
                   href={`/student/topics/${resume.topicId}/session?palier=${resume.palierIndex}`}
                   size="lg"
@@ -127,7 +131,7 @@ export default function StudentHomePage() {
                   {resume.subjectName} · {resume.topicName} · Palier{" "}
                   {resume.palierIndex}
                 </span>
-              </div>
+              </>
             ) : (
               <GameLinkButton
                 href="/student/map"

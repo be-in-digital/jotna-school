@@ -14,6 +14,7 @@ import { Pio, type PioState } from "@/components/student/pio";
 
 type StudentAlertTone = "success" | "warning" | "info";
 
+// Boutons alignés sur GameButton (pression chunky) — palette du monde.
 const toneStyles: Record<
   StudentAlertTone,
   {
@@ -26,23 +27,23 @@ const toneStyles: Record<
   success: {
     pioState: "cheer",
     icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
-    chip: "bg-emerald-100 text-emerald-700",
+    chip: "bg-lime-100 text-lime-700",
     button:
-      "bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-lg hover:scale-[1.01] hover:shadow-xl",
+      "border-b-4 border-lime-700 bg-lime-500 text-white shadow-md hover:bg-lime-400 active:translate-y-[3px] active:border-b-0",
   },
   warning: {
-    pioState: "hello",
+    pioState: "encourage",
     icon: <AlertTriangle className="h-4 w-4" aria-hidden />,
     chip: "bg-amber-100 text-amber-700",
     button:
-      "bg-gradient-to-r from-orange-400 to-pink-500 text-white shadow-lg hover:scale-[1.01] hover:shadow-xl",
+      "border-b-4 border-orange-700 bg-orange-500 text-white shadow-md hover:bg-orange-400 active:translate-y-[3px] active:border-b-0",
   },
   info: {
     pioState: "hello",
     icon: <Mail className="h-4 w-4" aria-hidden />,
     chip: "bg-sky-100 text-sky-700",
     button:
-      "bg-gradient-to-r from-sky-400 to-violet-500 text-white shadow-lg hover:scale-[1.01] hover:shadow-xl",
+      "border-b-4 border-sky-700 bg-sky-500 text-white shadow-md hover:bg-sky-400 active:translate-y-[3px] active:border-b-0",
   },
 };
 
@@ -73,20 +74,22 @@ export function StudentAlertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-0 bg-gradient-to-br from-amber-200 via-pink-200 to-sky-200 p-1">
-        <div className="rounded-[1.35rem] bg-white px-5 py-6 text-center sm:px-6">
+      <DialogContent className="overflow-hidden rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-100 via-orange-100 to-lime-100 p-1.5">
+        <div className="rounded-[1.35rem] bg-white/95 px-5 py-6 text-center sm:px-6">
           <DialogHeader>
-            <div className="mx-auto mb-1 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-pink-100 shadow-inner">
+            <div className="mx-auto mb-1 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-b from-sky-100 to-amber-100 shadow-inner">
               <Pio state={styles.pioState} size={96} />
             </div>
             <div
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide ${styles.chip}`}
+              className={`mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-game text-xs font-bold uppercase tracking-wide ${styles.chip}`}
             >
               {styles.icon}
               {label}
             </div>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription className="mx-auto max-w-sm font-semibold">
+            <DialogTitle className="font-game text-xl font-bold text-amber-950">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="mx-auto max-w-sm font-semibold text-amber-900/70">
               {description}
             </DialogDescription>
           </DialogHeader>
@@ -95,7 +98,7 @@ export function StudentAlertDialog({
             <button
               type="button"
               onClick={onPrimary}
-              className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 py-3 text-base font-extrabold transition-all ${styles.button}`}
+              className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 py-3 font-game text-base font-bold transition-all duration-100 ${styles.button}`}
             >
               {primaryLabel}
             </button>
@@ -103,7 +106,7 @@ export function StudentAlertDialog({
               <button
                 type="button"
                 onClick={onSecondary}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-slate-200 bg-white px-6 py-3 text-base font-extrabold text-slate-600 transition-all hover:bg-slate-50"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-amber-300 border-b-4 bg-white px-6 py-3 font-game text-base font-bold text-amber-900 transition-all duration-100 hover:bg-amber-50 active:translate-y-[3px] active:border-b-2"
               >
                 {secondaryLabel}
               </button>

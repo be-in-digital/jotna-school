@@ -4,8 +4,13 @@
 > **REDESIGN COMPLET ET LIVRÉ** — toutes les phases (A→H) implémentées et vérifiées
 > (299 tests unitaires + e2e verts, build prod OK). Fin de Phase F durcie : Carnet
 > (fix D8 cold start — plus de mur de zéros) et Salle des trophées (vitrine +
-> progression de collection) portés au niveau gaming. Seule la session d'exercices
-> reste sobre — décision G3.
+> progression de collection) portés au niveau gaming.
+>
+> **G3 amendé (2026-07-02, demande utilisateur)** : la session d'exercices et tous
+> les dialogs/états parlent désormais le design system (font-game, palette ambre,
+> boutons chunky, Pio v3 dans les états) — mais SANS éléments de gameplay
+> distrayants : pas de décor, pas de HUD, mode focus intact. Identité visuelle
+> partout, distraction nulle part.
 >
 > **Mascotte officielle : Pio v3 « Lionceau Téranga »** (brief de marque 2026-07-02) —
 > vectoriel plat, crinière-soleil, bandana wax discret, palette plateforme stricte.

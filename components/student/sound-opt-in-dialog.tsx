@@ -111,7 +111,7 @@ export function SoundOptInDialog({
             type="button"
             onClick={handlePreview}
             disabled={busy}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-3 text-base font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl disabled:opacity-50"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-5 py-3 font-game text-base font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0 disabled:opacity-50"
           >
             <Volume2 className="h-5 w-5" aria-hidden />
             {previewed ? "Encore une fois" : "Écouter d'abord"}
@@ -131,7 +131,7 @@ export function SoundOptInDialog({
               type="button"
               onClick={handleDecline}
               disabled={busy}
-              className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-base font-bold text-gray-700 transition-all hover:bg-gray-50 disabled:opacity-50"
+              className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 border-amber-300 border-b-4 bg-white px-4 py-3 font-game text-base font-bold text-amber-900 transition-all duration-100 hover:bg-amber-50 active:translate-y-[2px] active:border-b-2 disabled:opacity-50"
             >
               Non merci
             </button>

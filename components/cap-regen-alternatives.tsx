@@ -30,20 +30,20 @@ export function CapRegenAlternatives({
       className="mx-auto max-w-md space-y-4 rounded-3xl bg-white p-6 shadow-lg"
     >
       <div className="text-center">
-        <p className="text-lg font-bold text-gray-900">{intro}</p>
+        <p className="font-game text-lg font-bold text-amber-950">{intro}</p>
       </div>
       <div className="space-y-3">
         {options.map((opt, i) => {
           const isLink = i === 1; // refaire palier précédent = navigation
           const className =
-            "flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-50 to-pink-50 p-4 text-left transition-all hover:scale-[1.02] hover:shadow-md";
+            "flex w-full items-center gap-3 rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 text-left transition-all hover:scale-[1.02] hover:shadow-md";
           const content = (
             <>
               <span className="text-3xl" aria-hidden>
                 {opt.icon}
               </span>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900">{opt.label}</p>
+                <p className="font-semibold text-amber-950">{opt.label}</p>
               </div>
               <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
                 {opt.cta}

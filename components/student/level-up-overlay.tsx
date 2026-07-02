@@ -95,7 +95,7 @@ export function LevelUpOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900/80 via-pink-900/80 to-orange-900/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-amber-950/80 via-orange-950/80 to-emerald-950/80 p-4 backdrop-blur-sm"
           onClick={onDismiss}
           role="dialog"
           aria-label={`Tu passes au niveau ${level}`}
@@ -105,7 +105,7 @@ export function LevelUpOverlay({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.85, y: 10 }}
             transition={{ type: "spring", stiffness: 220, damping: 22 }}
-            className="relative flex w-full max-w-md flex-col items-center gap-4 rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-pink-50 p-6 text-center shadow-2xl"
+            className="relative flex w-full max-w-md flex-col items-center gap-4 rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-lime-50 p-6 border-2 border-amber-200 text-center shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Lottie animation container — fixed size to avoid layout thrash. */}
@@ -136,9 +136,9 @@ export function LevelUpOverlay({
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.7, type: "spring", stiffness: 220 }}
-                className="absolute -bottom-1 -left-3 text-pink-400"
+                className="absolute -bottom-1 -left-3 text-lime-500"
               >
-                <Sparkles className="h-6 w-6 fill-pink-300" aria-hidden />
+                <Sparkles className="h-6 w-6 fill-lime-300" aria-hidden />
               </motion.div>
             </div>
 
@@ -146,10 +146,10 @@ export function LevelUpOverlay({
               <p className="font-display text-sm font-bold uppercase tracking-wider text-orange-600">
                 Bravo !
               </p>
-              <h2 className="font-display text-4xl font-extrabold text-gray-900">
+              <h2 className="font-game text-4xl font-bold text-amber-950">
                 Niveau {level}
               </h2>
-              <p className="text-base font-semibold text-gray-600">
+              <p className="text-base font-semibold text-amber-900/70">
                 Tu progresses super bien
               </p>
             </div>
@@ -157,7 +157,7 @@ export function LevelUpOverlay({
             <button
               type="button"
               onClick={onDismiss}
-              className="mt-2 inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-8 py-3 text-base font-bold text-white shadow-lg transition-all hover:scale-[1.02]"
+              className="mt-2 inline-flex min-h-12 items-center justify-center rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-8 py-3 font-game text-base font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0"
             >
               Continuer
             </button>

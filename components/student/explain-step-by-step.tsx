@@ -83,7 +83,7 @@ export function ExplainStepByStep({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-40 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-amber-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           role="dialog"
           aria-label="Explication pas à pas"
         >
@@ -98,7 +98,7 @@ export function ExplainStepByStep({
               type="button"
               onClick={onClose}
               aria-label="Fermer"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-800 hover:bg-amber-200"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
@@ -107,14 +107,14 @@ export function ExplainStepByStep({
               {status.kind === "loading" && (
                 <div className="flex flex-col items-center gap-4 py-8 text-center">
                   <Pio state="hello" size={88} />
-                  <div className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                  <div className="flex items-center gap-2 font-game text-base font-semibold text-amber-950">
                     <Loader2
                       className="h-4 w-4 animate-spin text-orange-500"
                       aria-hidden
                     />
                     Pio prépare l&apos;explication…
                   </div>
-                  <p className="max-w-xs text-sm text-slate-500">
+                  <p className="max-w-xs text-sm text-amber-900/60">
                     Ça prend quelques secondes.
                   </p>
                 </div>
@@ -123,13 +123,13 @@ export function ExplainStepByStep({
               {status.kind === "error" && (
                 <div className="flex flex-col items-center gap-4 py-6 text-center">
                   <Pio state="sad" size={88} />
-                  <p className="text-base font-semibold text-slate-700">
+                  <p className="font-game text-base font-semibold text-amber-950">
                     {status.kidMessage}
                   </p>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="mt-2 inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-200 px-6 py-3 text-base font-bold text-slate-700 hover:bg-slate-300"
+                    className="mt-2 inline-flex min-h-12 items-center justify-center rounded-2xl border-b-4 border-amber-300 bg-amber-100 px-6 py-3 font-game text-base font-bold text-amber-900 transition-all duration-100 hover:bg-amber-200 active:translate-y-[2px] active:border-b-2"
                   >
                     Tant pis, je passe
                   </button>
@@ -167,7 +167,7 @@ function ExplanationContent({
         </div>
       </div>
 
-      <p className="text-center font-display text-base font-semibold text-slate-800">
+      <p className="text-center font-game text-base font-semibold text-amber-950">
         {explanation.intro}
       </p>
 
@@ -178,12 +178,12 @@ function ExplanationContent({
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.08, duration: 0.25 }}
-            className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3"
+            className="flex gap-3 rounded-2xl border-2 border-amber-100 bg-amber-50/70 p-3"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500 font-display text-sm font-extrabold text-white shadow">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 font-game text-sm font-bold text-white shadow">
               {idx + 1}
             </span>
-            <p className="flex-1 self-center text-sm leading-snug text-slate-700">
+            <p className="flex-1 self-center text-sm leading-snug text-amber-950/80">
               {step}
             </p>
           </motion.li>
@@ -199,7 +199,7 @@ function ExplanationContent({
       <button
         type="button"
         onClick={onClose}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-6 py-3 font-game text-base font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0"
       >
         <CheckCircle2 className="h-5 w-5" aria-hidden />
         J&apos;ai compris !

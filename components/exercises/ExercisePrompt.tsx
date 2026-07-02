@@ -15,7 +15,7 @@ export default function ExercisePrompt({ prompt }: { prompt: string }) {
 
   if (!quoted) {
     return (
-      <p className="text-xl font-bold text-gray-900 leading-relaxed">
+      <p className="text-xl font-bold text-amber-950 leading-relaxed">
         {prompt}
       </p>
     );
@@ -23,12 +23,12 @@ export default function ExercisePrompt({ prompt }: { prompt: string }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xl font-bold text-gray-900 leading-relaxed">
+      <p className="text-xl font-bold text-amber-950 leading-relaxed">
         {instruction}
       </p>
-      <div className="flex items-start gap-3 rounded-2xl border-2 border-indigo-100 bg-indigo-50/70 px-5 py-4">
-        <Quote className="mt-1 h-5 w-5 flex-shrink-0 text-indigo-400" />
-        <p className="text-lg font-medium text-indigo-900 italic leading-relaxed">
+      <div className="flex items-start gap-3 rounded-2xl border-2 border-sky-200 bg-sky-50/70 px-5 py-4">
+        <Quote className="mt-1 h-5 w-5 flex-shrink-0 text-sky-400" />
+        <p className="text-lg font-medium text-sky-900 italic leading-relaxed">
           {quoted}
         </p>
       </div>

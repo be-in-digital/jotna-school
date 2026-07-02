@@ -83,7 +83,7 @@ export default function ShortAnswerExercise({
       <button
         onClick={handleSubmit}
         disabled={disabled || !answer.trim()}
-        className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="w-full rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-6 py-4 font-game text-lg font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Valider
       </button>

@@ -128,7 +128,7 @@ export default function OrderExercise({
           <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
           <p className="font-bold text-amber-900">Cet exercice est cassé, on te le saute.</p>
           <p className="mt-1 text-sm text-amber-700">Pas de souci, ça ne te coûte rien.</p>
-          <button onClick={() => onSkip?.()} disabled={disabled} className="mt-1 rounded-2xl bg-amber-500 px-6 py-2.5 text-base font-bold text-white shadow hover:bg-amber-600 disabled:opacity-50">Suivant</button>
+          <button onClick={() => onSkip?.()} disabled={disabled} className="mt-1 rounded-2xl border-b-4 border-amber-700 bg-amber-500 px-6 py-2.5 font-game text-base font-bold text-white shadow-md transition-all duration-100 hover:bg-amber-400 active:translate-y-[2px] active:border-b-2 disabled:opacity-50">Suivant</button>
         </div>
       </div>
     );
@@ -195,7 +195,7 @@ export default function OrderExercise({
       <button
         onClick={handleSubmit}
         disabled={disabled}
-        className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-4 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="w-full rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-6 py-4 font-game text-lg font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Valider
       </button>

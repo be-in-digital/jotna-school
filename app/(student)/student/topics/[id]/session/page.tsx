@@ -27,6 +27,10 @@ import { kidMessages } from "@/lib/kidCopy";
 import { ExplainStepByStep } from "@/components/student/explain-step-by-step";
 import { Pio } from "@/components/student/pio";
 import { StudentAlertDialog } from "@/components/student/student-alert-dialog";
+import {
+  GameButton,
+  GameLinkButton,
+} from "@/components/student/game/game-button";
 import QcmExercise from "@/components/exercises/QcmExercise";
 import ShortAnswerExercise from "@/components/exercises/ShortAnswerExercise";
 import MatchExercise from "@/components/exercises/MatchExercise";
@@ -354,22 +358,29 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
   if (!isAuthenticated || profile === null) {
     return (
       <CenteredCard>
-        <h2 className="text-xl font-bold">Non connecté</h2>
-        <p className="text-gray-500">Connecte-toi pour faire les exercices.</p>
-        <Link
-          href="/login"
-          className="rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-bold text-white shadow-lg"
-        >
+        <Pio state="think" size={110} />
+        <h2 className="font-game text-xl font-bold text-amber-950">
+          Non connecté
+        </h2>
+        <p className="text-amber-900/60">
+          Connecte-toi pour faire les exercices.
+        </p>
+        <GameLinkButton href="/login" size="lg">
           Se connecter
-        </Link>
+        </GameLinkButton>
       </CenteredCard>
     );
   }
   if (!topic) {
     return (
       <CenteredCard>
-        <BookOpen className="h-16 w-16 text-gray-300" />
-        <h2 className="text-xl font-bold">Thématique introuvable</h2>
+        <BookOpen className="h-16 w-16 text-amber-300" />
+        <h2 className="font-game text-xl font-bold text-amber-950">
+          Thématique introuvable
+        </h2>
+        <GameLinkButton href="/student/map" variant="ghost">
+          Retour à la carte
+        </GameLinkButton>
       </CenteredCard>
     );
   }
@@ -393,13 +404,13 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
 
     return (
       <CenteredCard>
-        <p className="text-base text-red-600">{bootstrapError}</p>
-        <button
-          onClick={() => router.back()}
-          className="rounded-2xl bg-gray-200 px-6 py-2 text-base font-semibold"
-        >
+        <Pio state="sad" size={110} />
+        <p className="max-w-md font-game text-base font-semibold text-amber-950">
+          {bootstrapError}
+        </p>
+        <GameButton variant="ghost" onClick={() => router.back()}>
           Retour
-        </button>
+        </GameButton>
       </CenteredCard>
     );
   }
@@ -414,14 +425,11 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
   if (exercises === null || exercises.length === 0) {
     return (
       <CenteredCard>
-        <BookOpen className="h-16 w-16 text-gray-300" />
-        <h2 className="text-xl font-bold">Aucun exercice disponible</h2>
-        <button
-          onClick={() => router.back()}
-          className="rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-bold text-white shadow-lg"
-        >
-          Retour
-        </button>
+        <Pio state="think" size={110} />
+        <h2 className="font-game text-xl font-bold text-amber-950">
+          Aucun exercice disponible
+        </h2>
+        <GameButton onClick={() => router.back()}>Retour</GameButton>
       </CenteredCard>
     );
   }
@@ -434,18 +442,25 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className={`rounded-3xl p-8 text-center text-white shadow-xl ${
+          className={`relative overflow-hidden rounded-3xl border-b-8 p-8 text-center text-white shadow-xl ${
             validated
-              ? "bg-gradient-to-r from-green-400 to-emerald-500"
-              : "bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500"
+              ? "border-emerald-700 bg-gradient-to-r from-lime-500 to-emerald-500"
+              : "border-orange-700 bg-gradient-to-r from-orange-400 via-amber-400 to-rose-400"
           }`}
         >
-          <h1 className="text-3xl font-extrabold mb-3">
+          <div className="mx-auto mb-3 flex justify-center">
+            <Pio
+              state={validated ? "cheer" : "encourage"}
+              size={104}
+              className="drop-shadow-lg"
+            />
+          </div>
+          <h1 className="mb-3 font-game text-3xl font-bold">
             {validated
               ? kidMessages.palierValidatedShort
               : "Palier non validé"}
           </h1>
-          <p className="text-lg opacity-90 mb-4">
+          <p className="mb-4 text-lg opacity-95">
             {validated
               ? kidMessages.palierValidated(palierResult.starsTotal)
               : kidMessages.palierFailed(palierResult.starsTotal)}
@@ -459,14 +474,13 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         </motion.div>
 
         {!validated && palierResult.canRegen && !regenerating && (
-          <div className="text-center space-y-3">
-            <p className="text-base text-gray-700">{kidMessages.regenIntro}</p>
-            <button
-              onClick={handleRegen}
-              className="rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-8 py-3 text-lg font-bold text-white shadow-lg hover:scale-[1.02] transition-all"
-            >
+          <div className="space-y-3 text-center">
+            <p className="text-base text-amber-900/80">
+              {kidMessages.regenIntro}
+            </p>
+            <GameButton onClick={handleRegen} size="lg">
               {kidMessages.regenCta}
-            </button>
+            </GameButton>
           </div>
         )}
 
@@ -491,13 +505,24 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         )}
 
         {validated && (
-          <div className="text-center">
-            <Link
+          <div className="flex flex-col items-center gap-3 text-center">
+            <GameLinkButton
               href={`/student/topics/${topicId}/session?palier=${palierIndex + 1}`}
-              className="inline-block rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-8 py-3 text-lg font-bold text-white shadow-lg hover:scale-[1.02] transition-all"
+              variant="success"
+              size="lg"
             >
               Palier suivant 🚀
-            </Link>
+            </GameLinkButton>
+            <GameLinkButton
+              href={
+                topic?.subjectId
+                  ? `/student/map/${topic.subjectId}`
+                  : "/student/map"
+              }
+              variant="ghost"
+            >
+              Retour à la carte
+            </GameLinkButton>
           </div>
         )}
         <SceneAlertDialog
@@ -510,7 +535,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
           onQuit={() => {
             setSceneAlert(null);
             if (topic?.subjectId) {
-              router.push(`/student/subjects/${topic.subjectId}`);
+              router.push(`/student/map/${topic.subjectId}`);
             } else {
               router.push("/student/home");
             }
@@ -537,16 +562,16 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
 
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="text-sm text-gray-500">
-          <span className="font-semibold text-gray-700">
+        <div className="text-sm text-amber-900/60">
+          <span className="font-game font-bold text-amber-950">
             {topic.name ?? "Palier"} — niveau {palierIndex}
           </span>
           <span className="mx-2">·</span>
-          <span>
+          <span className="font-semibold">
             Question {currentIndex + 1}/{totalExos}
           </span>
           {exo?.isVariation && (
-            <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+            <span className="ml-2 rounded-full border border-sky-200 bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
               Variation
             </span>
           )}
@@ -565,7 +590,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
                   : "Activer le son"
               }
               aria-pressed={soundPref.soundEnabled}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-gray-600 shadow-sm transition-all hover:bg-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-200 bg-white/85 text-amber-900/70 shadow-sm transition-all hover:bg-white"
             >
               {soundPref.soundEnabled ? (
                 <Volume2 className="h-5 w-5" aria-hidden />
@@ -577,7 +602,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
           <button
             type="button"
             onClick={handleQuit}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-white"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-amber-200 bg-white/85 px-3 py-1.5 font-game text-xs font-semibold text-amber-900/70 shadow-sm hover:bg-white"
           >
             <X className="h-4 w-4" />
             {kidMessages.cta.quit}
@@ -585,14 +610,14 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-6 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+      {/* Progress bar — sand trail style */}
+      <div className="mb-6 h-3 w-full overflow-hidden rounded-full border border-amber-200 bg-amber-100">
         <motion.div
           initial={{ width: 0 }}
           animate={{
             width: `${((currentIndex + (feedback?.correct ? 1 : 0)) / totalExos) * 100}%`,
           }}
-          className="h-full bg-gradient-to-r from-orange-400 to-pink-500"
+          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
         />
       </div>
 
@@ -604,7 +629,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="rounded-3xl bg-white p-6 shadow-md"
+          className="rounded-3xl border-2 border-amber-200 bg-white/95 p-6 shadow-[0_6px_0_rgba(217,119,6,0.15)]"
         >
           <ExerciseRenderer
             exo={exo}
@@ -623,7 +648,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
                 hintsUsedThisExo < (failedAttemptsThisExo >= 4 ? 3 : failedAttemptsThisExo >= 2 ? 2 : 1) && (
                 <button
                   onClick={handleRequestHint}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-200"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-2xl border-2 border-amber-300 border-b-4 bg-amber-100 px-4 py-2 font-game text-sm font-semibold text-amber-800 transition-all hover:bg-amber-200 active:translate-y-[2px] active:border-b-2"
                 >
                   <Lightbulb className="h-4 w-4" />
                   Voir un indice
@@ -659,10 +684,10 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
                 className="mt-4 space-y-3"
               >
                 <div
-                  className={`rounded-xl px-4 py-3 text-center font-semibold ${
+                  className={`rounded-2xl border-2 px-4 py-3 text-center font-game font-bold ${
                     feedback.correct
-                      ? "bg-green-100 text-green-800"
-                      : "bg-orange-100 text-orange-800"
+                      ? "border-lime-200 bg-lime-100 text-lime-800"
+                      : "border-orange-200 bg-orange-100 text-orange-800"
                   }`}
                 >
                   {feedback.correct
@@ -673,25 +698,27 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
                 </div>
                 {!feedback.correct && feedback.attemptsRemaining === 0 && (
                   <>
-                    <button
+                    <GameButton
+                      variant="ghost"
                       onClick={() => setExplainOpen(true)}
                       disabled={submitting}
-                      className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-orange-300 bg-amber-50 px-6 py-3 text-base font-bold text-orange-700 shadow-sm hover:bg-amber-100 transition-all"
+                      className="w-full"
                     >
                       <Lightbulb className="h-5 w-5" aria-hidden />
                       Je veux comprendre
-                    </button>
-                    <button
+                    </GameButton>
+                    <GameButton
                       onClick={handleNextExo}
                       disabled={submitting}
-                      className="w-full rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-lg font-bold text-white shadow-lg hover:scale-[1.01] transition-all"
+                      size="lg"
+                      className="w-full"
                     >
                       {currentIndex < totalExos - 1
                         ? kidMessages.cta.next
                         : submitting
                           ? "..."
                           : "Voir mon résultat"}
-                    </button>
+                    </GameButton>
                   </>
                 )}
               </motion.div>
@@ -722,7 +749,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         onQuit={() => {
           setSceneAlert(null);
           if (topic?.subjectId) {
-            router.push(`/student/subjects/${topic.subjectId}`);
+            router.push(`/student/map/${topic.subjectId}`);
           } else {
             router.push("/student/home");
           }
@@ -820,26 +847,26 @@ function LockedPalierScreen({
         initial={{ opacity: 0, y: 14, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-amber-300 via-orange-300 to-pink-400 p-1 shadow-2xl"
+        className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-amber-300 via-orange-300 to-lime-300 p-1 shadow-2xl"
       >
         <div className="absolute left-8 top-8 h-8 w-8 rotate-12 rounded-lg bg-white/35" />
         <div className="absolute right-10 top-10 h-7 w-7 -rotate-12 rounded-md bg-sky-200/70" />
         <div className="absolute bottom-12 left-12 h-6 w-6 rotate-45 rounded-md bg-emerald-200/70" />
 
         <div className="relative rounded-[1.35rem] bg-white/92 px-5 py-7 text-center sm:px-8 sm:py-8">
-          <div className="mx-auto mb-3 flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-pink-100 shadow-inner">
-            <Pio state="hello" size={122} />
+          <div className="mx-auto mb-3 flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-b from-sky-100 to-amber-100 shadow-inner">
+            <Pio state="think" size={122} />
           </div>
 
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-orange-700">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 font-game text-xs font-bold uppercase tracking-wide text-orange-700">
             <LockKeyhole className="h-3.5 w-3.5" aria-hidden />
             Palier {currentPalier} verrouillé
           </div>
 
-          <h1 className="font-display text-3xl font-extrabold leading-tight text-slate-950 sm:text-4xl">
+          <h1 className="font-game text-3xl font-bold leading-tight text-amber-950 sm:text-4xl">
             Encore une marche avant !
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-base font-semibold text-slate-600">
+          <p className="mx-auto mt-3 max-w-md text-base font-semibold text-amber-900/70">
             Pio garde ce palier au chaud. Termine d&apos;abord le palier{" "}
             {previousPalier}, puis la suite s&apos;ouvrira.
           </p>
@@ -862,18 +889,18 @@ function LockedPalierScreen({
             />
           </div>
 
-          <p className="mx-auto mt-5 max-w-md rounded-2xl bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
+          <p className="mx-auto mt-5 max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900/60">
             {message}
           </p>
 
-          <button
-            type="button"
+          <GameButton
             onClick={onGoPrevious}
-            className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-3 text-base font-extrabold text-white shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl sm:w-auto"
+            size="lg"
+            className="mt-6 w-full sm:w-auto"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden />
             Reprendre le palier {previousPalier}
-          </button>
+          </GameButton>
         </div>
       </motion.div>
     </div>
@@ -893,14 +920,14 @@ function StepBubble({
     <div
       className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 px-2 py-3 ${
         active
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-slate-200 bg-slate-50 text-slate-400"
+          ? "border-lime-200 bg-lime-50 text-lime-700"
+          : "border-amber-200 bg-amber-50/60 text-amber-900/40"
       }`}
     >
       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm">
         {icon}
       </div>
-      <p className="text-xs font-extrabold">{label}</p>
+      <p className="font-game text-xs font-bold">{label}</p>
     </div>
   );
 }

@@ -1,14 +1,27 @@
 "use client";
 
-export default function StudentError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+import { Pio } from "@/components/student/pio";
+
+// Redesign Gaming — error boundary de l'espace élève : Pio réconforte,
+// le ton reste positif (Decision 82), bouton chunky du design system.
+export default function StudentError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
-      <div className="text-6xl mb-4">😅</div>
-      <h2 className="text-2xl font-bold text-orange-600 mb-2">Oups !</h2>
-      <p className="text-gray-700 mb-6">Quelque chose s&apos;est mal passé. Pas de panique !</p>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center p-8 text-center">
+      <Pio state="sad" size={130} className="mb-4 drop-shadow-md" />
+      <h2 className="mb-2 font-game text-2xl font-bold text-amber-950">
+        Oups !
+      </h2>
+      <p className="mb-6 text-amber-900/70">
+        Quelque chose s&apos;est mal passé. Pas de panique !
+      </p>
       <button
         onClick={reset}
-        className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold text-lg hover:bg-orange-600"
+        className="inline-flex min-h-12 items-center justify-center rounded-2xl border-b-4 border-orange-700 bg-orange-500 px-8 py-3 font-game text-lg font-bold text-white shadow-md transition-all duration-100 hover:bg-orange-400 active:translate-y-[3px] active:border-b-0"
       >
         Réessayer
       </button>
