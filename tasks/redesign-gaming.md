@@ -1,7 +1,11 @@
 # Redesign Gaming — Espace Élève « Le Monde de Pio »
 
 > Issu d'une session de brainstorming structurée (2026-07-01). Statut au 2026-07-02 :
-> **Phases A→G implémentées et vérifiées** (299 tests unitaires + 15 e2e verts, build prod OK).
+> **REDESIGN COMPLET ET LIVRÉ** — toutes les phases (A→H) implémentées et vérifiées
+> (299 tests unitaires + e2e verts, build prod OK). Fin de Phase F durcie : Carnet
+> (fix D8 cold start — plus de mur de zéros) et Salle des trophées (vitrine +
+> progression de collection) portés au niveau gaming. Socle Rive retiré (remplacé
+> par le système sprite). Seule la session d'exercices reste sobre — décision G3.
 > **Phase H révisée et livrée** : l'identité officielle de Pio est l'avatar chibi (référence
 > `.context`, 2026-07-02). Le mesh image→3D (Meshy, rig+idle) a été essayé puis retiré —
 > qualité indigne d'un personnage chibi à fourrure (G2 plan B contractuel). Le « Pio riche »
