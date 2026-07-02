@@ -97,9 +97,10 @@ export default function StudentHomePage() {
           </div>
         )}
 
-        {/* Pio — feet ON the grass line, independent from the CTA layer so
-            he never floats mid-sky (the old stacked column pushed him up). */}
-        <div className="absolute inset-x-0 bottom-[6.75rem] flex justify-center sm:bottom-[7.5rem]">
+        {/* Pio — feet ON the ground line of the backdrop. The CTA lives
+            OUTSIDE the scene (below), so nothing ever pushes Pio off the
+            ground (retour utilisateur). */}
+        <div className="absolute inset-x-0 bottom-12 flex justify-center sm:bottom-14">
           {loaded ? (
             <PioStage
               context={{
@@ -113,47 +114,47 @@ export default function StudentHomePage() {
             <div className="h-[190px]" aria-hidden />
           )}
         </div>
-
-        {/* CTA layer — sits on the foreground grass, in front of Pio */}
-        <div className="absolute inset-x-0 bottom-5 flex flex-col items-center gap-2 px-4 sm:bottom-7">
-          {loaded ? (
-            resume ? (
-              <>
-                <GameLinkButton
-                  href={`/student/topics/${resume.topicId}/session?palier=${resume.palierIndex}`}
-                  size="lg"
-                  className="min-w-[16rem]"
-                >
-                  <Play className="h-5 w-5 fill-current" aria-hidden />
-                  Continuer l&apos;aventure
-                </GameLinkButton>
-                <span className="max-w-[20rem] truncate rounded-full bg-white/80 px-3 py-1 text-center text-sm font-semibold text-amber-900/80 backdrop-blur-sm">
-                  {resume.subjectName} · {resume.topicName} · Palier{" "}
-                  {resume.palierIndex}
-                </span>
-              </>
-            ) : (
-              <GameLinkButton
-                href="/student/map"
-                size="lg"
-                className="min-w-[16rem]"
-              >
-                {coldStart ? (
-                  <Sparkles className="h-5 w-5" aria-hidden />
-                ) : (
-                  <MapIcon className="h-5 w-5" aria-hidden />
-                )}
-                {coldStart ? "Commencer l'aventure" : "Choisir une aventure"}
-              </GameLinkButton>
-            )
-          ) : (
-            <div
-              className="h-14 w-64 animate-pulse rounded-3xl bg-white/60"
-              aria-hidden
-            />
-          )}
-        </div>
       </section>
+
+      {/* ------------------------------------------------ CTA — sous la scène */}
+      <div className="flex flex-col items-center gap-2 px-4">
+        {loaded ? (
+          resume ? (
+            <>
+              <GameLinkButton
+                href={`/student/topics/${resume.topicId}/session?palier=${resume.palierIndex}`}
+                size="lg"
+                className="w-full max-w-md"
+              >
+                <Play className="h-5 w-5 fill-current" aria-hidden />
+                Continuer l&apos;aventure
+              </GameLinkButton>
+              <span className="max-w-[20rem] truncate rounded-full bg-white/80 px-3 py-1 text-center text-sm font-semibold text-amber-900/80 backdrop-blur-sm">
+                {resume.subjectName} · {resume.topicName} · Palier{" "}
+                {resume.palierIndex}
+              </span>
+            </>
+          ) : (
+            <GameLinkButton
+              href="/student/map"
+              size="lg"
+              className="w-full max-w-md"
+            >
+              {coldStart ? (
+                <Sparkles className="h-5 w-5" aria-hidden />
+              ) : (
+                <MapIcon className="h-5 w-5" aria-hidden />
+              )}
+              {coldStart ? "Commencer l'aventure" : "Choisir une aventure"}
+            </GameLinkButton>
+          )
+        ) : (
+          <div
+            className="h-14 w-full max-w-md animate-pulse rounded-3xl bg-white/60"
+            aria-hidden
+          />
+        )}
+      </div>
 
       {/* ------------------------------------------------ missions du jour */}
       <QuestBoard />
