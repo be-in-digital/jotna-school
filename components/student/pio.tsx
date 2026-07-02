@@ -4,18 +4,18 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
- * Pio — LA mascotte : l'avatar officiel rendu (lionceau chibi fourni par
- * l'utilisateur, 2026-07-02), décliné en 8 poses générées depuis la
- * référence exacte puis détourées (`public/images/pio/*.png`).
+ * Pio — LA mascotte : l'avatar officiel v4 « explorateur à la loupe »
+ * (image fournie par l'utilisateur, 2026-07-02 — référence source dans
+ * `public/brand/pio/reference-v4.png`), détouré localement et servi depuis
+ * `public/images/pio/*.png`.
  *
  * Décisions utilisateur verrouillées :
- * - c'est CET avatar qui incarne Pio partout (le vectoriel plat est retiré
- *   de l'interface) ;
- * - AUCUNE animation du corps — le changement d'état est un simple
- *   crossfade d'opacité entre poses.
+ * - c'est CET avatar qui incarne Pio partout, modales et dialogs inclus ;
+ * - AUCUNE animation du corps.
  *
- * Le composant rend uniquement la pose courante (next/image, mise en cache
- * navigateur au premier affichage de chaque pose).
+ * Les 8 états pointent pour l'instant vers la même pose v4 (les variantes
+ * de poses pourront être régénérées depuis la référence quand Higgsfield
+ * sera ré-authentifié). Le composant rend uniquement la pose courante.
  */
 
 export type PioState =
@@ -51,9 +51,9 @@ const LABELS: Record<PioState, string> = {
   sleep: "Pio dort",
 };
 
-// Les découpes sont en ~2:3 portrait ; `size` reste la hauteur (comme les
-// versions précédentes) pour ne casser aucun appelant.
-const ASPECT = 2 / 3;
+// Découpe v4 : ~0,715 (l./h., crinière large) ; `size` reste la hauteur
+// (comme les versions précédentes) pour ne casser aucun appelant.
+const ASPECT = 0.715;
 
 type PioProps = {
   state?: PioState;
