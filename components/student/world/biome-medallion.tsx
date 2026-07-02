@@ -27,13 +27,13 @@ export function biomeForKey(key: string): BiomeKind {
   return BIOMES[h % BIOMES.length];
 }
 
-// Per-kind zoom: colline/forêt/rivière sources are isolated vignettes on
-// white — scaling them inside the circular mask pushes the white out.
+// Per-kind zoom: pushes any white vignette background of a source outside
+// the circular mask (1 = full-bleed source, no zoom needed).
 const BIOME_ART: Record<BiomeKind, { src: string; scale: number }> = {
   plaine: { src: "/images/world/biome-plaine.jpg", scale: 1 },
-  riviere: { src: "/images/world/biome-riviere.jpg", scale: 1.1 },
-  colline: { src: "/images/world/biome-colline.jpg", scale: 1.38 },
-  foret: { src: "/images/world/biome-foret.jpg", scale: 1.24 },
+  riviere: { src: "/images/world/biome-riviere.jpg", scale: 1 },
+  colline: { src: "/images/world/biome-colline.jpg", scale: 1.04 },
+  foret: { src: "/images/world/biome-foret.jpg", scale: 1 },
 };
 
 export function BiomeMedallionRich({
@@ -60,7 +60,6 @@ export function BiomeMedallionRich({
         alt=""
         fill
         sizes="128px"
-        quality={80}
         className="object-cover"
         style={{ transform: `scale(${art.scale})` }}
       />

@@ -46,7 +46,6 @@ export function HubBackdrop() {
         alt=""
         fill
         sizes="100vw"
-        quality={80}
         // The sources are portrait; on wide stages the cover-crop band is
         // aimed at the landmarks + clearing (sky trimmed).
         className={cn(

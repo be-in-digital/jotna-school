@@ -162,7 +162,6 @@ export default function SubjectMapPage({
               aria-hidden
               fill
               sizes="(min-width: 640px) 28rem, 100vw"
-              quality={78}
               className="object-cover opacity-90"
             />
           )}

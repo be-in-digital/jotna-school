@@ -1,10 +1,14 @@
 # Redesign Gaming — Espace Élève « Le Monde de Pio »
 
 > Issu d'une session de brainstorming structurée (2026-07-01). Statut au 2026-07-02 :
-> **Phases A→G implémentées et vérifiées** (299 tests unitaires + 15 e2e verts, build prod OK,
-> vérification visuelle hub/carte). **Phase H (Pio 3D/GLB) en attente** : génération image→3D
-> bloquée par les crédits Higgsfield (plan free, 0,56 crédit) — plan B actif (Pio vectoriel
-> animé), point de montage documenté dans `components/student/game/pio-stage.tsx`.
+> **Phases A→G implémentées et vérifiées** (299 tests unitaires + 15 e2e verts, build prod OK).
+> **Phase H révisée et livrée** : l'identité officielle de Pio est l'avatar chibi (référence
+> `.context`, 2026-07-02). Le mesh image→3D (Meshy, rig+idle) a été essayé puis retiré —
+> qualité indigne d'un personnage chibi à fourrure (G2 plan B contractuel). Le « Pio riche »
+> du hub est un **sprite d'états de l'avatar officiel** (idle/hello/cheer/sad générés depuis
+> la référence, détourés, animés par transformations — `components/student/pio-sprite.tsx`),
+> crossfadé sur le Pio vectoriel v2, gaté tier full (G5). Décors bitmap (G4) : scènes hub
+> 16:9 + portrait, 4 biomes, fond de carte — Higgsfield, DA verrouillée sur l'avatar.
 > Complète `tasks/design.md` (qui reste la référence du produit global).
 
 ## 1. Résumé de compréhension
