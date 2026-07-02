@@ -6,6 +6,7 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { todayYmd } from "./streak";
 import {
@@ -406,5 +407,13 @@ export const recordActivity = internalMutation({
         : {}),
     });
     await creditQuestRewards(ctx, profile, newlyCompleted);
+
+    // Badges missions (Première mission, Journée parfaite, …) — vérifiés
+    // uniquement quand une quête vient d'être complétée (pas à chaque event).
+    if (newlyCompleted.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.badges.checkAndAward, {
+        studentId: profile._id,
+      });
+    }
   },
 });

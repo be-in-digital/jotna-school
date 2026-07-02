@@ -336,6 +336,11 @@ export const submitPalier = mutation({
         studentId: profile._id,
         events: [{ type: "palier_validated" }],
       });
+      // Badges paliers/zones/série : l'attribution ne tournait jamais dans
+      // le flux palier (seul le flux legacy la déclenchait).
+      await ctx.scheduler.runAfter(0, internal.badges.checkAndAward, {
+        studentId: profile._id,
+      });
     }
 
     // Cumulative regen check (Decision 60) — UI uses canRegen flag.

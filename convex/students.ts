@@ -311,7 +311,11 @@ export const getMyStats = query({
           badge: {
             ...badge,
             rarity: normalizeRarity(badge.rarity),
-            criteriaText: getConditionText(badge.condition),
+            criteriaText: getConditionText(
+              badge.condition,
+              badge.conditionType,
+              badge.conditionParams,
+            ),
           },
         });
       }

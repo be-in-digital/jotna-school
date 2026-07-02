@@ -18,6 +18,7 @@ import {
   Infinity as InfinityIcon,
   Lightbulb,
   Lock,
+  Map as MapIcon,
   Medal,
   Moon,
   Mountain,
@@ -28,6 +29,7 @@ import {
   Rabbit,
   RefreshCw,
   Rocket,
+  ScrollText,
   Snowflake,
   Sparkles,
   Star,
@@ -66,6 +68,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Heart,
   Infinity: InfinityIcon,
   Lightbulb,
+  Map: MapIcon,
   Medal,
   Moon,
   Mountain,
@@ -76,6 +79,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Rabbit,
   RefreshCw,
   Rocket,
+  ScrollText,
   Snowflake,
   Sparkles,
   Star,
@@ -102,41 +106,85 @@ export function BadgeIcon({
 }
 
 // ---------------------------------------------------------------------------
-// BadgeShield — SVG procedural badge "écusson" rendering.
-// Inspired by the Duolingo-style achievement plates: pastel-colored shape
-// with a centered white circular medallion holding a padlock (locked) or
-// the lucide icon (earned). Shape + color are deterministic by badge name.
+// BadgeShield v2 — trophées de jeu « matière par rareté ».
+// La valeur se lit d'un coup d'œil, comme dans les vrais jeux mobiles :
+//   common    → BOIS   (plaque du camp, chaleureuse)
+//   rare      → ARGENT (froid, ciel)
+//   epic      → VIOLET royal serti d'or
+//   legendary → OR massif + rayons de soleil (la savane !) + étincelles
+// La forme (écusson/rond/hexagone/bannière) reste dérivée du nom pour la
+// variété ; le verrouillé est en pierre grise. Style chunky du monde :
+// contour épais sombre, biseau clair en haut, ruban sous les badges gagnés.
 // ---------------------------------------------------------------------------
 
 type ShieldShape = "shield" | "round" | "hexagon" | "banner";
 
 const SHAPES: ShieldShape[] = ["shield", "round", "hexagon", "banner"];
 
-// Pastel palettes — each entry: outer ring, mid fill, inner fill.
-// Picked to read clearly even when desaturated for locked state.
-const PALETTES: Array<{
-  outer: string;
-  mid: string;
-  inner: string;
-  accent: string;
-}> = [
-  // blue
-  { outer: "#bfdbfe", mid: "#93c5fd", inner: "#60a5fa", accent: "#3b82f6" },
-  // green
-  { outer: "#bbf7d0", mid: "#86efac", inner: "#4ade80", accent: "#22c55e" },
-  // purple
-  { outer: "#e9d5ff", mid: "#d8b4fe", inner: "#c084fc", accent: "#a855f7" },
-  // orange
-  { outer: "#fed7aa", mid: "#fdba74", inner: "#fb923c", accent: "#f97316" },
-  // pink
-  { outer: "#fbcfe8", mid: "#f9a8d4", inner: "#f472b6", accent: "#ec4899" },
-  // teal
-  { outer: "#99f6e4", mid: "#5eead4", inner: "#2dd4bf", accent: "#14b8a6" },
-  // amber
-  { outer: "#fde68a", mid: "#fcd34d", inner: "#fbbf24", accent: "#f59e0b" },
-  // indigo
-  { outer: "#c7d2fe", mid: "#a5b4fc", inner: "#818cf8", accent: "#6366f1" },
-];
+type Material = {
+  rim: string; // contour épais
+  base: string; // corps
+  bevel: string; // biseau haut (lumière)
+  deep: string; // ombre basse
+  medallion: string; // fond du médaillon central
+  icon: string; // couleur de l'icône
+  ribbon: string; // ruban
+  ribbonDark: string;
+};
+
+const MATERIALS: Record<RarityTier, Material> = {
+  common: {
+    rim: "#7c4a12",
+    base: "#b5762a",
+    bevel: "#d9a05b",
+    deep: "#8f5717",
+    medallion: "#fdf3e0",
+    icon: "#92400e",
+    ribbon: "#b45309",
+    ribbonDark: "#7c3f0d",
+  },
+  rare: {
+    rim: "#475569",
+    base: "#94a3b8",
+    bevel: "#e2e8f0",
+    deep: "#64748b",
+    medallion: "#f8fafc",
+    icon: "#0369a1",
+    ribbon: "#0ea5e9",
+    ribbonDark: "#0369a1",
+  },
+  epic: {
+    rim: "#5b21b6",
+    base: "#8b5cf6",
+    bevel: "#c4b5fd",
+    deep: "#6d28d9",
+    medallion: "#f5f3ff",
+    icon: "#6d28d9",
+    ribbon: "#f59e0b",
+    ribbonDark: "#b45309",
+  },
+  legendary: {
+    rim: "#92400e",
+    base: "#f59e0b",
+    bevel: "#fde68a",
+    deep: "#d97706",
+    medallion: "#fffbeb",
+    icon: "#b45309",
+    ribbon: "#ef4444",
+    ribbonDark: "#b91c1c",
+  },
+};
+
+const LOCKED_MATERIAL: Material = {
+  rim: "#78716c",
+  base: "#a8a29e",
+  bevel: "#d6d3d1",
+  deep: "#8a8580",
+  medallion: "#f5f5f4",
+  icon: "#78716c",
+  ribbon: "#a8a29e",
+  ribbonDark: "#78716c",
+};
 
 function hashString(s: string): number {
   let h = 0;
@@ -150,156 +198,52 @@ function pickShape(name: string): ShieldShape {
   return SHAPES[hashString(name) % SHAPES.length];
 }
 
-function pickPalette(
-  name: string,
-  tier: RarityTier,
-): (typeof PALETTES)[number] {
-  // Legendary always gets amber; epic always gets purple; others hash-derived.
-  if (tier === "legendary") return PALETTES[6];
-  if (tier === "epic") return PALETTES[2];
-  return PALETTES[hashString(name) % PALETTES.length];
-}
-
-/**
- * Renders the colored backdrop SVG path for a given shield shape.
- * Coordinate space: 100×100, centered at (50, 50).
- */
-function ShapePath({ shape, fill }: { shape: ShieldShape; fill: string }) {
+/** Chemin SVG du corps pour chaque forme (espace 100×100, centré 50/50). */
+function shapeD(shape: ShieldShape): string {
   switch (shape) {
     case "shield":
-      // Classic shield with curved bottom point
-      return (
-        <path
-          d="M 50 8 L 86 22 L 86 56 Q 86 78 50 92 Q 14 78 14 56 L 14 22 Z"
-          fill={fill}
-        />
-      );
+      return "M 50 8 L 84 21 L 84 54 Q 84 76 50 91 Q 16 76 16 54 L 16 21 Z";
     case "round":
-      return <circle cx="50" cy="50" r="42" fill={fill} />;
+      // cercle approximé en path pour partager le rendu contour/biseau
+      return "M 50 8 A 42 42 0 1 1 49.9 8 Z";
     case "hexagon":
-      return (
-        <path
-          d="M 50 8 L 86 28 L 86 72 L 50 92 L 14 72 L 14 28 Z"
-          fill={fill}
-        />
-      );
+      return "M 50 7 L 85 27 L 85 71 L 50 91 L 15 71 L 15 27 Z";
     case "banner":
-      // Rounded rectangle with banner ribbons at bottom
-      return (
-        <>
-          <path
-            d="M 18 14 Q 18 8 24 8 L 76 8 Q 82 8 82 14 L 82 70 L 50 86 L 18 70 Z"
-            fill={fill}
-          />
-        </>
-      );
+      return "M 20 12 Q 20 7 26 7 L 74 7 Q 80 7 80 12 L 80 66 L 50 84 L 20 66 Z";
   }
 }
 
-/**
- * Decorative accents around the shield, varying by tier:
- *   - common:  a couple of tiny stars
- *   - rare:    star pair + small ribbon dots
- *   - epic:    laurel branches at the sides
- *   - legendary: laurels + crown sparkles
- */
-function ShapeAccents({
-  shape,
-  tier,
-  color,
-}: {
-  shape: ShieldShape;
-  tier: RarityTier;
-  color: string;
-}) {
-  const star = (cx: number, cy: number, size = 3) => (
-    <path
-      d={`M ${cx} ${cy - size} L ${cx + size * 0.3} ${cy - size * 0.3} L ${
-        cx + size
-      } ${cy} L ${cx + size * 0.3} ${cy + size * 0.3} L ${cx} ${cy + size} L ${
-        cx - size * 0.3
-      } ${cy + size * 0.3} L ${cx - size} ${cy} L ${
-        cx - size * 0.3
-      } ${cy - size * 0.3} Z`}
-      fill={color}
-      opacity="0.85"
-    />
-  );
-
-  // Laurel branch starting at (cx, cy), curving outward by `dir` (-1 left, +1 right)
-  const laurel = (cx: number, cy: number, dir: 1 | -1) => (
-    <g>
-      <path
-        d={`M ${cx} ${cy} Q ${cx + dir * 12} ${cy - 4} ${cx + dir * 18} ${cy - 18}`}
+/** Rayons de soleil derrière le badge légendaire (la savane). */
+function SunRays({ color }: { color: string }) {
+  const rays = Array.from({ length: 12 }, (_, i) => {
+    const angle = (i * 30 * Math.PI) / 180;
+    const x1 = 50 + Math.cos(angle) * 38;
+    const y1 = 50 + Math.sin(angle) * 38;
+    const x2 = 50 + Math.cos(angle) * 49;
+    const y2 = 50 + Math.sin(angle) * 49;
+    return (
+      <line
+        key={i}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
         stroke={color}
-        strokeWidth="2"
-        fill="none"
+        strokeWidth={i % 2 === 0 ? 5 : 3}
         strokeLinecap="round"
-        opacity="0.8"
+        opacity={i % 2 === 0 ? 0.8 : 0.5}
       />
-      {[0, 1, 2, 3].map((i) => (
-        <ellipse
-          key={i}
-          cx={cx + dir * (4 + i * 4)}
-          cy={cy - 2 - i * 4}
-          rx="3"
-          ry="1.6"
-          fill={color}
-          opacity="0.7"
-          transform={`rotate(${dir * (40 - i * 8)} ${cx + dir * (4 + i * 4)} ${cy - 2 - i * 4})`}
-        />
-      ))}
-    </g>
-  );
+    );
+  });
+  return <g>{rays}</g>;
+}
 
-  // Place stars relative to shape's top-corner positions
-  const corners: Record<ShieldShape, Array<[number, number]>> = {
-    shield: [
-      [18, 18],
-      [82, 18],
-    ],
-    round: [
-      [16, 22],
-      [84, 22],
-    ],
-    hexagon: [
-      [16, 24],
-      [84, 24],
-    ],
-    banner: [
-      [22, 14],
-      [78, 14],
-    ],
-  };
-
+function Sparkle({ cx, cy, size, color }: { cx: number; cy: number; size: number; color: string }) {
   return (
-    <g>
-      {(tier === "common" || tier === "rare") && (
-        <>
-          {star(corners[shape][0][0], corners[shape][0][1])}
-          {star(corners[shape][1][0], corners[shape][1][1])}
-        </>
-      )}
-      {tier === "rare" && (
-        <>
-          <circle cx="20" cy="50" r="2" fill={color} opacity="0.6" />
-          <circle cx="80" cy="50" r="2" fill={color} opacity="0.6" />
-        </>
-      )}
-      {(tier === "epic" || tier === "legendary") && (
-        <>
-          {laurel(28, 70, -1)}
-          {laurel(72, 70, 1)}
-        </>
-      )}
-      {tier === "legendary" && (
-        <>
-          {star(50, 6, 4)}
-          {star(20, 30, 3)}
-          {star(80, 30, 3)}
-        </>
-      )}
-    </g>
+    <path
+      d={`M ${cx} ${cy - size} L ${cx + size * 0.3} ${cy - size * 0.3} L ${cx + size} ${cy} L ${cx + size * 0.3} ${cy + size * 0.3} L ${cx} ${cy + size} L ${cx - size * 0.3} ${cy + size * 0.3} L ${cx - size} ${cy} L ${cx - size * 0.3} ${cy - size * 0.3} Z`}
+      fill={color}
+    />
   );
 }
 
@@ -316,7 +260,7 @@ function IconAtSize({
   return (
     <Icon
       style={{ width: pixels, height: pixels, color }}
-      strokeWidth={2.2}
+      strokeWidth={2.4}
       aria-hidden
     />
   );
@@ -336,16 +280,10 @@ export function BadgeShield({
   size?: number;
 }) {
   const shape = pickShape(badgeName);
-  const palette = pickPalette(badgeName, tier);
-
-  // Locked palette desaturates everything to slate/gray tones
-  const lockedColors = {
-    outer: "#e2e8f0",
-    mid: "#cbd5e1",
-    inner: "#94a3b8",
-    accent: "#64748b",
-  };
-  const colors = locked ? lockedColors : palette;
+  const m = locked ? LOCKED_MATERIAL : MATERIALS[tier];
+  const d = shapeD(shape);
+  const legendary = !locked && tier === "legendary";
+  const epicPlus = !locked && (tier === "epic" || tier === "legendary");
 
   return (
     <div
@@ -354,33 +292,75 @@ export function BadgeShield({
       aria-hidden
     >
       <svg viewBox="0 0 100 100" width={size} height={size}>
-        {/* Outer ring (largest) */}
-        <ShapePath shape={shape} fill={colors.outer} />
-        {/* Mid layer — slightly inset using transform */}
-        <g transform="translate(50 50) scale(0.86) translate(-50 -50)">
-          <ShapePath shape={shape} fill={colors.mid} />
+        {/* rayons de soleil — légendaire uniquement */}
+        {legendary && <SunRays color="#fbbf24" />}
+
+        {/* ruban de trophée sous les badges gagnés */}
+        {!locked && (
+          <g>
+            <path d="M 34 72 L 26 94 L 38 88 L 42 78 Z" fill={m.ribbonDark} />
+            <path d="M 66 72 L 74 94 L 62 88 L 58 78 Z" fill={m.ribbon} />
+          </g>
+        )}
+
+        {/* contour épais (rim) */}
+        <g transform="translate(50 50) scale(1.06) translate(-50 -50)">
+          <path d={d} fill={m.rim} />
         </g>
-        {/* Inner layer */}
-        <g transform="translate(50 50) scale(0.72) translate(-50 -50)">
-          <ShapePath shape={shape} fill={colors.inner} />
+        {/* corps */}
+        <path d={d} fill={m.base} />
+        {/* biseau haut — lumière chunky */}
+        <clipPath id={`bevel-${shape}-${tier}-${locked ? "l" : "u"}`}>
+          <path d={d} />
+        </clipPath>
+        <g clipPath={`url(#bevel-${shape}-${tier}-${locked ? "l" : "u"})`}>
+          <ellipse cx="50" cy="18" rx="46" ry="22" fill={m.bevel} opacity="0.75" />
+          <ellipse cx="50" cy="96" rx="52" ry="26" fill={m.deep} opacity="0.7" />
         </g>
-        {/* Decorative accents on the outer rim */}
-        <ShapeAccents shape={shape} tier={tier} color={colors.accent} />
+        {/* liseré doré des épiques/légendaires */}
+        {epicPlus && (
+          <g transform="translate(50 50) scale(0.9) translate(-50 -50)">
+            <path
+              d={d}
+              fill="none"
+              stroke={tier === "legendary" ? "#fffbeb" : "#fbbf24"}
+              strokeWidth="2.5"
+              opacity="0.9"
+            />
+          </g>
+        )}
+
+        {/* étincelles */}
+        {legendary && (
+          <>
+            <Sparkle cx={22} cy={22} size={4} color="#fffbeb" />
+            <Sparkle cx={80} cy={28} size={3} color="#fffbeb" />
+            <Sparkle cx={76} cy={70} size={3.4} color="#fde68a" />
+          </>
+        )}
+        {!locked && tier === "epic" && (
+          <>
+            <Sparkle cx={24} cy={24} size={3} color="#ede9fe" />
+            <Sparkle cx={78} cy={30} size={2.5} color="#ede9fe" />
+          </>
+        )}
       </svg>
 
-      {/* Centered white medallion holding the icon or padlock */}
+      {/* médaillon central : icône ou cadenas */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
-          className="flex items-center justify-center rounded-full bg-white shadow-md"
+          className="flex items-center justify-center rounded-full shadow-md"
           style={{
-            width: size * 0.42,
-            height: size * 0.42,
+            width: size * 0.44,
+            height: size * 0.44,
+            background: m.medallion,
+            boxShadow: `inset 0 ${size * 0.02}px 0 rgba(255,255,255,0.9), inset 0 -${size * 0.03}px 0 rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.15)`,
           }}
         >
           {locked ? (
             <Lock
-              className="text-slate-500"
-              style={{ width: size * 0.22, height: size * 0.22 }}
+              className="text-stone-500"
+              style={{ width: size * 0.2, height: size * 0.2 }}
               strokeWidth={2.5}
               aria-hidden
             />
@@ -388,7 +368,7 @@ export function BadgeShield({
             <IconAtSize
               name={iconName}
               pixels={Math.round(size * 0.24)}
-              color={colors.accent}
+              color={m.icon}
             />
           )}
         </div>
