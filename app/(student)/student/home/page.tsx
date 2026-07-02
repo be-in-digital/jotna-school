@@ -107,7 +107,6 @@ export default function StudentHomePage() {
                 questsTotal,
                 streak: stats?.streaksEnabled ? stats.currentStreak : 0,
               }}
-              rich={tier === "full"}
             />
           ) : (
             <div className="h-[190px]" aria-hidden />

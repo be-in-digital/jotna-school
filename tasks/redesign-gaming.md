@@ -4,8 +4,15 @@
 > **REDESIGN COMPLET ET LIVRÉ** — toutes les phases (A→H) implémentées et vérifiées
 > (299 tests unitaires + e2e verts, build prod OK). Fin de Phase F durcie : Carnet
 > (fix D8 cold start — plus de mur de zéros) et Salle des trophées (vitrine +
-> progression de collection) portés au niveau gaming. Socle Rive retiré (remplacé
-> par le système sprite). Seule la session d'exercices reste sobre — décision G3.
+> progression de collection) portés au niveau gaming. Seule la session d'exercices
+> reste sobre — décision G3.
+>
+> **Mascotte officielle : Pio v3 « Lionceau Téranga »** (brief de marque 2026-07-02) —
+> vectoriel plat, crinière-soleil, bandana wax discret, palette plateforme stricte.
+> Source de vérité : `scripts/generate-pio.mjs` → `public/brand/pio/` (8 états +
+> silhouette + 4 pictos, SVG + PNG 1200px). Rendu app : `components/student/pio.tsx`
+> (statique, tous tiers, ~6 Ko/état). Les identités précédentes (SVG dessiné main,
+> sprite photoréaliste, socle Rive, mesh 3D) sont retirées.
 > **Phase H révisée et livrée** : l'identité officielle de Pio est l'avatar chibi (référence
 > `.context`, 2026-07-02). Le mesh image→3D (Meshy, rig+idle) a été essayé puis retiré —
 > qualité indigne d'un personnage chibi à fourrure (G2 plan B contractuel). Le « Pio riche »

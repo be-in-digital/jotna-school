@@ -98,7 +98,7 @@ export function SoundOptInDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <Pio state="cheer" size={96} animated={false} />
+          <Pio state="cheer" size={96} />
           <DialogTitle>Tu veux entendre Pio ?</DialogTitle>
           <DialogDescription>
             Il fait un petit son quand tu réussis !

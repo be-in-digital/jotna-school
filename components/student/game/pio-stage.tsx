@@ -3,20 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pio, type PioState } from "@/components/student/pio";
-import { PioSprite } from "@/components/student/pio-sprite";
 import { kidMessages } from "@/lib/kidCopy";
 import { play } from "@/lib/sounds";
-import { cn } from "@/lib/utils";
 
 /**
  * Redesign Gaming — Pio, alive at the center of his camp.
  * Tap → random happy reaction; 5 quick taps → secret celebration (the kind
  * of hidden toy kids hunt for). Contextual speech bubble on arrival.
  *
- * Phase H (révisée) — on capable devices (`rich`) the vector Pio crossfades
- * into the OFFICIAL avatar sprite (state-driven renders of the reference —
- * pixel-perfect identity). The image→3D mesh path was tried and retired:
- * single-image meshing visibly degrades a fluffy chibi character (G2 plan B).
+ * Pio v3 : la mascotte vectorielle officielle (Lionceau Téranga) est rendue
+ * sur TOUS les tiers — les SVG pèsent ~6 Ko, aucun gate nécessaire.
  */
 
 const REACTION_MS = 1600;
@@ -68,21 +64,14 @@ function celebrateSecret() {
 export function PioStage({
   context,
   size = 190,
-  rich = false,
 }: {
   context: PioStageContext;
   size?: number;
-  /** G5 — passed by the hub when the device tier is "full". */
-  rich?: boolean;
 }) {
   const [pioState, setPioState] = useState<PioState>("idle");
   const [bubble, setBubble] = useState<string | null>(null);
   const tapsRef = useRef<number[]>([]);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  // Crossfade: the vector Pio shows instantly, the official avatar sprite
-  // takes over once its idle frame is decoded.
-  const [spriteReady, setSpriteReady] = useState(false);
 
   const scheduleReset = useCallback((ms: number) => {
     const t = setTimeout(() => setPioState("idle"), ms);
@@ -166,35 +155,7 @@ export function PioStage({
         aria-label="Jouer avec Pio"
         className="group rounded-full outline-none transition-transform focus-visible:ring-4 focus-visible:ring-sky-300 active:scale-95"
       >
-        <span
-          className="relative flex items-end justify-center"
-          style={{ width: size, height: size }}
-        >
-          {/* vector Pio — instant, fades out once the avatar sprite is in */}
-          <span
-            className={cn(
-              "absolute inset-0 transition-opacity duration-500",
-              spriteReady ? "opacity-0" : "opacity-100",
-            )}
-          >
-            <Pio state={pioState} size={size} className="drop-shadow-md" />
-          </span>
-          {/* official avatar sprite (rich tier only, crossfaded) */}
-          {rich && (
-            <span
-              className={cn(
-                "transition-opacity duration-500",
-                spriteReady ? "opacity-100" : "opacity-0",
-              )}
-            >
-              <PioSprite
-                state={pioState}
-                size={size}
-                onFirstLoad={() => setSpriteReady(true)}
-              />
-            </span>
-          )}
-        </span>
+        <Pio state={pioState} size={size} className="drop-shadow-md" />
         {/* ground shadow anchors Pio in the scene */}
         <span
           aria-hidden

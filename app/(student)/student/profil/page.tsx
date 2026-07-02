@@ -17,10 +17,9 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { setSoundEnabledLocal } from "@/lib/sounds";
-import { PioSprite } from "@/components/student/pio-sprite";
+import { Pio } from "@/components/student/pio";
 import { GamePanel } from "@/components/student/game/game-panel";
 import { GameLinkButton } from "@/components/student/game/game-button";
-import { useDeviceTier } from "@/hooks/use-device-tier";
 
 const EXOS_PER_LEVEL_UI = 50; // Mirrors students.EXOS_PER_LEVEL.
 
@@ -38,7 +37,6 @@ function formatDuration(ms: number): string {
 export default function StudentProfilePage() {
   const stats = useQuery(api.students.getMyStats);
   const setSoundEnabledMut = useMutation(api.streak.setSoundEnabled);
-  const tier = useDeviceTier();
 
   const handleToggleSound = async () => {
     if (!stats) return;
@@ -68,13 +66,6 @@ export default function StudentProfilePage() {
       </div>
     );
   }
-
-  const initials = stats.student.name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   // D8 — cold start : un tout nouvel élève ne voit pas un mur de zéros.
   // On bascule sur un état d'accueil positif tant qu'il n'a rien accompli.
@@ -113,14 +104,10 @@ export default function StudentProfilePage() {
                 alt={stats.student.name}
                 className="h-24 w-24 rounded-full object-cover shadow-lg"
               />
-            ) : tier === "full" ? (
-              <span className="flex h-24 w-24 items-end justify-center overflow-hidden rounded-full bg-gradient-to-b from-sky-200 to-amber-100 shadow-inner">
-                <PioSprite state="hello" size={104} />
-              </span>
             ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-500 font-game text-3xl font-bold text-white shadow-lg">
-                {initials}
-              </div>
+              <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-sky-100 to-amber-100 shadow-inner">
+                <Pio state="hello" size={82} />
+              </span>
             )}
           </LevelRing>
 
