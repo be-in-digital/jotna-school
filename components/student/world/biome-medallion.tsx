@@ -1,9 +1,15 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
  * Redesign Gaming G4b — circular biome vignette for map zones. Four generic
  * savanna biomes cycled by index (data-driven: works for any number of
  * subjects), ring tinted with the subject's color from Convex.
+ *
+ * Two renderers share the same API:
+ * - BiomeMedallion      → hand-crafted SVG (lite tier, zero download)
+ * - BiomeMedallionRich  → AI bitmap art (full tier), per-kind zoom so the
+ *   white vignette background of the source images falls outside the mask
  */
 
 export type BiomeKind = "plaine" | "riviere" | "colline" | "foret";
@@ -19,6 +25,49 @@ export function biomeForKey(key: string): BiomeKind {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return BIOMES[h % BIOMES.length];
+}
+
+// Per-kind zoom: colline/forêt/rivière sources are isolated vignettes on
+// white — scaling them inside the circular mask pushes the white out.
+const BIOME_ART: Record<BiomeKind, { src: string; scale: number }> = {
+  plaine: { src: "/images/world/biome-plaine.jpg", scale: 1 },
+  riviere: { src: "/images/world/biome-riviere.jpg", scale: 1.1 },
+  colline: { src: "/images/world/biome-colline.jpg", scale: 1.38 },
+  foret: { src: "/images/world/biome-foret.jpg", scale: 1.24 },
+};
+
+export function BiomeMedallionRich({
+  kind,
+  tint = "#f59e0b",
+  className,
+}: {
+  kind: BiomeKind;
+  tint?: string;
+  className?: string;
+}) {
+  const art = BIOME_ART[kind];
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "relative block overflow-hidden rounded-full border-4 bg-sky-100 shadow-md",
+        className,
+      )}
+      style={{ borderColor: tint }}
+    >
+      <Image
+        src={art.src}
+        alt=""
+        fill
+        sizes="128px"
+        quality={80}
+        className="object-cover"
+        style={{ transform: `scale(${art.scale})` }}
+      />
+      {/* subtle inner rim so the art sits "inside" the ring */}
+      <span className="absolute inset-0 rounded-full shadow-[inset_0_2px_8px_rgba(0,0,0,0.18)]" />
+    </span>
+  );
 }
 
 export function BiomeMedallion({

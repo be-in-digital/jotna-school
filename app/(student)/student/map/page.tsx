@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader2, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   BiomeMedallion,
+  BiomeMedallionRich,
   biomeForKey,
 } from "@/components/student/world/biome-medallion";
 import {
@@ -16,6 +18,7 @@ import {
   trailHeight,
 } from "@/components/student/world/trail";
 import { Pio } from "@/components/student/pio";
+import { useDeviceTier } from "@/hooks/use-device-tier";
 
 /**
  * Redesign Gaming §5 — la carte-monde : chaque matière est une zone de la
@@ -27,6 +30,9 @@ const ROW_H = 168;
 
 export default function WorldMapPage() {
   const zones = useQuery(api.students.getMyWorldMap);
+  // G5 — rich art (terrain bitmap, biome photos) only on capable devices.
+  const tier = useDeviceTier();
+  const rich = tier === "full";
 
   if (zones === undefined) {
     return (
@@ -67,11 +73,24 @@ export default function WorldMapPage() {
       </header>
 
       <div
-        className="relative mx-auto w-full max-w-md"
+        className="relative mx-auto w-full max-w-md overflow-hidden rounded-[2rem]"
         style={{ height }}
       >
+        {/* G4 — ambient terrain art behind the algorithmic trail (full tier);
+            the SVG scenery covers the lite tier. */}
+        {rich && (
+          <Image
+            src="/images/world/map-trail-bg.jpg"
+            alt=""
+            aria-hidden
+            fill
+            sizes="(min-width: 640px) 28rem, 100vw"
+            quality={78}
+            className="object-cover opacity-90"
+          />
+        )}
         <TrailConnector stops={stops} height={height} />
-        <TrailScenery stops={stops} height={height} />
+        {!rich && <TrailScenery stops={stops} height={height} />}
 
         {zones.map((zone, i) => {
           const stop = stops[i];
@@ -101,11 +120,19 @@ export default function WorldMapPage() {
                       transition={{ duration: 1.6, repeat: Infinity }}
                     />
                   )}
-                  <BiomeMedallion
-                    kind={biomeForKey(zone._id)}
-                    tint={zone.color}
-                    className="h-24 w-24 drop-shadow-lg transition-transform group-hover:scale-105 group-focus-visible:scale-105 group-active:scale-95 sm:h-28 sm:w-28"
-                  />
+                  {rich ? (
+                    <BiomeMedallionRich
+                      kind={biomeForKey(zone._id)}
+                      tint={zone.color}
+                      className="h-24 w-24 drop-shadow-lg transition-transform group-hover:scale-105 group-focus-visible:scale-105 group-active:scale-95 sm:h-28 sm:w-28"
+                    />
+                  ) : (
+                    <BiomeMedallion
+                      kind={biomeForKey(zone._id)}
+                      tint={zone.color}
+                      className="h-24 w-24 drop-shadow-lg transition-transform group-hover:scale-105 group-focus-visible:scale-105 group-active:scale-95 sm:h-28 sm:w-28"
+                    />
+                  )}
                   {done && (
                     <span className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-lime-500 shadow-md">
                       <Check className="h-4.5 w-4.5 text-white" strokeWidth={3.5} aria-hidden />

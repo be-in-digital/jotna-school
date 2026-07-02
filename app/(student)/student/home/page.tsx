@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Play, Map as MapIcon, Sparkles } from "lucide-react";
 import { SavannaScene } from "@/components/student/world/savanna-scene";
+import { HubBackdrop } from "@/components/student/world/hub-backdrop";
 import { PioStage } from "@/components/student/game/pio-stage";
 import { QuestBoard } from "@/components/student/game/quest-board";
 import { GameLinkButton } from "@/components/student/game/game-button";
@@ -68,6 +69,9 @@ export default function StudentHomePage() {
           className="absolute inset-0 hidden h-full w-full sm:block"
           animated={tier === "full"}
         />
+        {/* G4/G5 — rich AI backdrop fades in over the vector scene on
+            capable devices only; lite devices never download it. */}
+        {tier === "full" && <HubBackdrop />}
 
         {/* evening mood — pure CSS overlay */}
         <div

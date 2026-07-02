@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,6 +18,7 @@ import {
 import { motion } from "framer-motion";
 import {
   BiomeMedallion,
+  BiomeMedallionRich,
   biomeForKey,
 } from "@/components/student/world/biome-medallion";
 import {
@@ -26,6 +28,7 @@ import {
   trailHeight,
 } from "@/components/student/world/trail";
 import { GamePanel } from "@/components/student/game/game-panel";
+import { useDeviceTier } from "@/hooks/use-device-tier";
 
 /**
  * Redesign Gaming §5 — la zone d'une matière : chemin de niveaux (topics)
@@ -47,6 +50,9 @@ export default function SubjectMapPage({
   const map = useQuery(api.students.getStudentSubjectMap, {
     subjectId: subjectId as Id<"subjects">,
   });
+  // G5 — rich art only on capable devices.
+  const tier = useDeviceTier();
+  const rich = tier === "full";
 
   if (map === undefined) {
     return (
@@ -101,11 +107,19 @@ export default function SubjectMapPage({
         variant="board"
         className="flex items-center gap-4 p-4 sm:p-5"
       >
-        <BiomeMedallion
-          kind={biomeForKey(subject._id)}
-          tint={subject.color}
-          className="h-20 w-20 shrink-0 drop-shadow-md sm:h-24 sm:w-24"
-        />
+        {rich ? (
+          <BiomeMedallionRich
+            kind={biomeForKey(subject._id)}
+            tint={subject.color}
+            className="h-20 w-20 shrink-0 drop-shadow-md sm:h-24 sm:w-24"
+          />
+        ) : (
+          <BiomeMedallion
+            kind={biomeForKey(subject._id)}
+            tint={subject.color}
+            className="h-20 w-20 shrink-0 drop-shadow-md sm:h-24 sm:w-24"
+          />
+        )}
         <div className="min-w-0">
           <h1 className="truncate font-game text-2xl font-bold text-amber-950 sm:text-3xl">
             {subject.name}
@@ -137,9 +151,23 @@ export default function SubjectMapPage({
           </p>
         </div>
       ) : (
-        <div className="relative mx-auto w-full max-w-md" style={{ height }}>
+        <div
+          className="relative mx-auto w-full max-w-md overflow-hidden rounded-[2rem]"
+          style={{ height }}
+        >
+          {rich && (
+            <Image
+              src="/images/world/map-trail-bg.jpg"
+              alt=""
+              aria-hidden
+              fill
+              sizes="(min-width: 640px) 28rem, 100vw"
+              quality={78}
+              className="object-cover opacity-90"
+            />
+          )}
           <TrailConnector stops={stops} height={height} />
-          <TrailScenery stops={stops} height={height} />
+          {!rich && <TrailScenery stops={stops} height={height} />}
 
           {topics.map((topic, i) => (
             <LevelNode
@@ -249,7 +277,7 @@ function LevelNode({
     <span
       className={`line-clamp-2 max-w-full rounded-2xl px-3 py-1 text-center font-game text-sm font-bold shadow-sm ${
         isLocked
-          ? "bg-white/60 text-stone-400"
+          ? "bg-white/85 text-stone-500"
           : "border-2 border-white/70 bg-white/90 text-amber-950 backdrop-blur-sm"
       }`}
     >
