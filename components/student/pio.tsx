@@ -44,20 +44,23 @@ export function Pio({
       role="img"
       aria-label={labels[state]}
       className={`pio-container inline-block ${className}`}
-      style={{ width: size, height: size }}
+      // Grounded motion (aligned with PioSprite): breathe/hop from the feet,
+      // never float or pendulum-swing the whole body.
+      style={{ width: size, height: size, originY: 1 }}
       animate={
         animated
           ? state === "cheer"
-            ? { rotate: [-3, 3, -3], y: [0, -4, 0] }
+            ? { y: [0, -8, 0], scaleY: [1, 1.04, 0.97, 1] }
             : state === "hello"
-              ? { y: [0, -3, 0] }
-              : { y: [0, -2, 0] }
+              ? { y: [0, -5, 0, -3, 0] }
+              : { scaleY: [1, 1.02, 1] }
           : undefined
       }
       transition={
         animated
           ? {
-              duration: state === "cheer" ? 0.6 : 2.4,
+              duration:
+                state === "cheer" ? 0.6 : state === "hello" ? 0.9 : 3.2,
               repeat: Infinity,
               ease: "easeInOut",
             }
