@@ -4,7 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { TentTree, Map, Trophy, NotebookPen, Star, Flame } from "lucide-react";
+import {
+  TentTree,
+  Map,
+  Trophy,
+  NotebookPen,
+  Star,
+  Flame,
+  Coins,
+  Shield,
+} from "lucide-react";
 import { UserMenu } from "@/components/ui/user-menu";
 import { Brand } from "@/components/landing/brand";
 import { MotionConfig } from "framer-motion";
@@ -142,21 +151,38 @@ function StudentStatusBar() {
 
   const showStreak = stats.streaksEnabled && stats.currentStreak > 0;
   const showStars = stats.totalStars > 0;
+  const showCoins = (stats.coins ?? 0) > 0;
 
-  if (!showStreak && !showStars) return null;
+  if (!showStreak && !showStars && !showCoins) return null;
 
   return (
     <div className="flex items-center gap-1.5">
       {showStreak && (
         <span
           className="inline-flex items-center gap-1 rounded-full border-2 border-orange-200 bg-orange-100 px-2.5 py-1 font-game text-sm font-bold text-orange-700"
-          aria-label={`Série de ${stats.currentStreak} jour${stats.currentStreak > 1 ? "s" : ""}`}
+          aria-label={`Série de ${stats.currentStreak} jour${stats.currentStreak > 1 ? "s" : ""}${stats.streakFreezeActive ? ", protégée aujourd'hui" : ""}`}
         >
           <Flame
             className="h-4 w-4 fill-orange-500 text-orange-500"
             aria-hidden
           />
           <span>{stats.currentStreak}</span>
+          {/* Gel de série — la protection est enfin visible */}
+          {stats.streakFreezeActive && (
+            <Shield
+              className="h-3.5 w-3.5 fill-sky-300 text-sky-500"
+              aria-hidden
+            />
+          )}
+        </span>
+      )}
+      {showCoins && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full border-2 border-amber-300 bg-amber-100 px-2.5 py-1 font-game text-sm font-bold text-amber-800"
+          aria-label={`${stats.coins} pièce${(stats.coins ?? 0) > 1 ? "s" : ""}`}
+        >
+          <Coins className="h-4 w-4 text-amber-600" aria-hidden />
+          <span>{stats.coins}</span>
         </span>
       )}
       {showStars && (

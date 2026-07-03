@@ -13,6 +13,7 @@ import {
   readStudentPreferences,
   type StudentPreferences,
 } from "./students";
+import { PERFECT_DAY_COINS, QUEST_COIN_MULTIPLIER } from "./shop";
 
 // ===========================================================================
 // Quêtes quotidiennes — Redesign Gaming G7/G10 (tasks/redesign-gaming.md)
@@ -292,13 +293,19 @@ async function creditQuestRewards(
   ctx: MutationCtx,
   profile: Doc<"profiles">,
   newlyCompleted: DailyQuest[],
+  perfectDay: boolean,
 ): Promise<void> {
   if (newlyCompleted.length === 0) return;
-  const total = newlyCompleted.reduce((acc, q) => acc + q.reward, 0);
+  const totalStars = newlyCompleted.reduce((acc, q) => acc + q.reward, 0);
+  // Boutique G7-V2 : chaque quête rapporte aussi des pièces (reward × 3),
+  // et finir les 3 quêtes du jour ajoute le bonus « journée parfaite ».
+  const totalCoins =
+    totalStars * QUEST_COIN_MULTIPLIER + (perfectDay ? PERFECT_DAY_COINS : 0);
   const prefs = readStudentPreferences(profile);
   const next: StudentPreferences = {
     ...prefs,
-    questBonusStars: (prefs.questBonusStars ?? 0) + total,
+    questBonusStars: (prefs.questBonusStars ?? 0) + totalStars,
+    coins: (prefs.coins ?? 0) + totalCoins,
   };
   await ctx.db.patch(profile._id, { preferences: next });
 }
@@ -400,13 +407,12 @@ export const recordActivity = internalMutation({
     if (!changed) return;
 
     const allDone = quests.every((q) => q.completedAt !== undefined);
+    const newlyPerfectDay = allDone && !row.allCompletedAt;
     await ctx.db.patch(row._id, {
       quests,
-      ...(allDone && !row.allCompletedAt
-        ? { allCompletedAt: Date.now() }
-        : {}),
+      ...(newlyPerfectDay ? { allCompletedAt: Date.now() } : {}),
     });
-    await creditQuestRewards(ctx, profile, newlyCompleted);
+    await creditQuestRewards(ctx, profile, newlyCompleted, newlyPerfectDay);
 
     // Badges missions (Première mission, Journée parfaite, …) — vérifiés
     // uniquement quand une quête vient d'être complétée (pas à chaque event).

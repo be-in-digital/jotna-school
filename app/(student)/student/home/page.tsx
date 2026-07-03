@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Play, Map as MapIcon, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Play, Map as MapIcon, Sparkles, Coins } from "lucide-react";
 import { SavannaScene } from "@/components/student/world/savanna-scene";
 import { HubBackdrop } from "@/components/student/world/hub-backdrop";
 import { PioStage } from "@/components/student/game/pio-stage";
 import { QuestBoard } from "@/components/student/game/quest-board";
+import { HubBadgeToast } from "@/components/student/game/hub-badge-toast";
+import { WeeklyRecap } from "@/components/student/game/weekly-recap";
 import { GameLinkButton } from "@/components/student/game/game-button";
 import { useDeviceTier } from "@/hooks/use-device-tier";
+import { track } from "@/lib/analytics";
 
 /**
  * Redesign Gaming — LE HUB : le camp de Pio (tasks/redesign-gaming.md §4).
@@ -22,8 +26,17 @@ export default function StudentHomePage() {
   const stats = useQuery(api.students.getMyStats);
   const resume = useQuery(api.students.getMyResumeTarget);
   const daily = useQuery(api.quests.getMyDaily);
+  // Boutique G7-V2 — objets équipés (décos du camp + aura de Pio).
+  const shop = useQuery(api.shop.getMyShop);
   // G5 — lite devices get the same world, fully static (zero animation cost).
   const tier = useDeviceTier();
+
+  const equippedDecos =
+    shop?.items.filter((i) => i.equipped && i.kind === "camp" && i.anchor) ??
+    [];
+  const equippedAura = shop?.items.find(
+    (i) => i.equipped && i.kind === "aura",
+  );
 
   // Teinte du soir (18h–6h locale) — appliquée après hydratation pour éviter
   // tout mismatch SSR/client ; différée d'un tick (lint set-state-in-effect),
@@ -97,6 +110,23 @@ export default function StudentHomePage() {
           </div>
         )}
 
+        {/* Boutique G7-V2 — décos équipées, posées dans le camp */}
+        {equippedDecos.map((deco) => (
+          <span
+            key={deco.key}
+            aria-hidden
+            className="absolute select-none drop-shadow-md"
+            style={{
+              left: `${deco.anchor!.left}%`,
+              bottom: `${deco.anchor!.bottom}%`,
+              fontSize: deco.anchor!.size,
+              transform: "translateX(-50%)",
+            }}
+          >
+            {deco.emoji}
+          </span>
+        ))}
+
         {/* Pio — feet ON the ground line of the backdrop. The CTA lives
             OUTSIDE the scene (below), so nothing ever pushes Pio off the
             ground (retour utilisateur). */}
@@ -109,11 +139,21 @@ export default function StudentHomePage() {
                 questsTotal,
                 streak: stats?.streaksEnabled ? stats.currentStreak : 0,
               }}
+              aura={equippedAura?.aura}
             />
           ) : (
             <div className="h-[190px]" aria-hidden />
           )}
         </div>
+
+        {/* Boutique — panneau en bois, coin bas-droit du camp */}
+        <Link
+          href="/student/shop"
+          className="absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-1.5 rounded-2xl border-2 border-amber-800 border-b-4 bg-gradient-to-b from-amber-600 to-amber-700 px-3.5 py-1.5 font-game text-sm font-bold text-amber-50 shadow-md transition-all duration-100 hover:from-amber-500 active:translate-y-[2px] active:border-b-2 sm:bottom-4 sm:right-4"
+        >
+          <Coins className="h-4 w-4 text-amber-200" aria-hidden />
+          Boutique
+        </Link>
       </section>
 
       {/* ------------------------------------------------ CTA — sous la scène */}
@@ -125,6 +165,7 @@ export default function StudentHomePage() {
                 href={`/student/topics/${resume.topicId}/session?palier=${resume.palierIndex}`}
                 size="lg"
                 className="w-full max-w-md"
+                onClick={() => track("hub_cta_clicked", { kind: "resume" })}
               >
                 <Play className="h-5 w-5 fill-current" aria-hidden />
                 Continuer l&apos;aventure
@@ -156,8 +197,16 @@ export default function StudentHomePage() {
         )}
       </div>
 
+      {/* ------------------------------------------------ récap du lundi */}
+      <WeeklyRecap />
+
       {/* ------------------------------------------------ missions du jour */}
       <QuestBoard />
+
+      {/* Badges gagnés hors session (missions, sortie anticipée) */}
+      {stats && stats.unseenBadges.length > 0 && (
+        <HubBadgeToast unseen={stats.unseenBadges} />
+      )}
     </div>
   );
 }

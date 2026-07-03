@@ -29,6 +29,8 @@ import {
 } from "@/components/student/world/trail";
 import { GamePanel } from "@/components/student/game/game-panel";
 import { useDeviceTier } from "@/hooks/use-device-tier";
+import { useEffect } from "react";
+import { track } from "@/lib/analytics";
 
 /**
  * Redesign Gaming §5 — la zone d'une matière : chemin de niveaux (topics)
@@ -53,6 +55,10 @@ export default function SubjectMapPage({
   // G5 — rich art only on capable devices.
   const tier = useDeviceTier();
   const rich = tier === "full";
+
+  useEffect(() => {
+    track("zone_opened", { subjectId });
+  }, [subjectId]);
 
   if (map === undefined) {
     return (

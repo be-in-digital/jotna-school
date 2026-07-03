@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getConditionText, normalizeRarity } from "./badges";
+import { todayYmd } from "./streak";
 
 // ---------------------------------------------------------------------------
 // Star approximation helper.
@@ -60,6 +61,13 @@ export type StudentPreferences = {
   // getMyStats.totalStars. Kept here (not recomputed from dailyQuests rows)
   // so totalStars stays a bounded read.
   questBonusStars?: number;
+  // Boutique (G7-V2) — solde de pièces. Crédité par shop.creditCoins
+  // (paliers validés, quêtes, journées parfaites, trésors de zone),
+  // débité par shop.buyItem.
+  coins?: number;
+  // Trésors de zone déjà versés (une matière 100 % terminée = +50 pièces,
+  // une seule fois par matière). Borné par le nombre de matières.
+  rewardedZoneSubjectIds?: string[];
 };
 export function readStudentPreferences(
   profile: Doc<"profiles">,
@@ -415,10 +423,17 @@ export const getMyStats = query({
       exosToNextLevel: exosToNextLevel(totalCorrectExercises),
       // D3c — total stars
       totalStars,
+      // Boutique G7-V2 — solde de pièces (HUD + boutique)
+      coins: prefs.coins ?? 0,
       // D7 — streak
       streaksEnabled,
       currentStreak: streak.current,
       longestStreak: streak.longest,
+      // Gel de série — visible dans le HUD quand la protection est active
+      streakFreezeActive:
+        streaksEnabled &&
+        prefs.streak?.freezeAvailableUntilYmd !== undefined &&
+        prefs.streak.freezeAvailableUntilYmd >= todayYmd(),
       // D6 — sound
       soundEnabled,
       // D20/D21 — drives "should we show the opt-in dialog?" check (false ⇒
@@ -493,6 +508,65 @@ export const getMyWorldMap = query({
       });
     }
     return zones;
+  },
+});
+
+/**
+ * Récap hebdo enfant — les accomplissements des 7 derniers jours, affichés
+ * par Pio sur le hub le lundi (« Ta semaine dans la savane »).
+ */
+export const getMyWeeklyRecap = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!profile || profile.role !== "student") return null;
+
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    const attempts = await ctx.db
+      .query("palierAttempts")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .take(500);
+    const validated7d = attempts.filter(
+      (a) =>
+        a.status === "validated" && (a.completedAt ?? 0) >= weekAgo,
+    );
+    const stars7d = validated7d.reduce(
+      (acc, a) => acc + approxStarsForValidatedPalier(a.averageScore ?? 0),
+      0,
+    );
+
+    const earned = await ctx.db
+      .query("earnedBadges")
+      .withIndex("by_studentId", (q) => q.eq("studentId", profile._id))
+      .take(100);
+    const badges7d = earned.filter((e) => e.earnedAt >= weekAgo).length;
+
+    const questRows = await ctx.db
+      .query("dailyQuests")
+      .withIndex("by_student_day", (q) => q.eq("studentId", profile._id))
+      .take(30);
+    const quests7d = questRows
+      .filter((r) => r.createdAt >= weekAgo)
+      .reduce(
+        (acc, r) =>
+          acc + r.quests.filter((q) => q.completedAt !== undefined).length,
+        0,
+      );
+
+    return {
+      paliersValidated: validated7d.length,
+      stars: stars7d,
+      badges: badges7d,
+      quests: quests7d,
+      hasAnything:
+        validated7d.length > 0 || badges7d > 0 || quests7d > 0,
+    };
   },
 });
 

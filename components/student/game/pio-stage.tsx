@@ -64,9 +64,13 @@ function celebrateSecret() {
 export function PioStage({
   context,
   size = 190,
+  aura,
 }: {
   context: PioStageContext;
   size?: number;
+  /** Boutique G7-V2 — classes de gradient de l'aura équipée (jamais SUR
+   * l'avatar : un halo statique derrière lui). */
+  aura?: string;
 }) {
   const [pioState, setPioState] = useState<PioState>("idle");
   const [bubble, setBubble] = useState<string | null>(null);
@@ -153,9 +157,16 @@ export function PioStage({
         type="button"
         onClick={onTap}
         aria-label="Jouer avec Pio"
-        className="group rounded-full outline-none transition-transform focus-visible:ring-4 focus-visible:ring-sky-300 active:scale-95"
+        className="group relative rounded-full outline-none transition-transform focus-visible:ring-4 focus-visible:ring-sky-300 active:scale-95"
       >
-        <Pio state={pioState} size={size} className="drop-shadow-md" />
+        {/* aura équipée (boutique) — halo statique derrière Pio */}
+        {aura && (
+          <span
+            aria-hidden
+            className={`absolute -inset-5 rounded-full bg-gradient-to-t blur-lg ${aura}`}
+          />
+        )}
+        <Pio state={pioState} size={size} className="relative drop-shadow-md" />
         {/* ground shadow anchors Pio in the scene */}
         <span
           aria-hidden

@@ -31,6 +31,7 @@ import {
   GameButton,
   GameLinkButton,
 } from "@/components/student/game/game-button";
+import { track } from "@/lib/analytics";
 import QcmExercise from "@/components/exercises/QcmExercise";
 import ShortAnswerExercise from "@/components/exercises/ShortAnswerExercise";
 import MatchExercise from "@/components/exercises/MatchExercise";
@@ -56,6 +57,8 @@ type PalierResult = {
   failedCount: number;
   canRegen: boolean;
   cumulativeRegens: number;
+  coinsEarned?: number;
+  zoneTreasure?: number;
 };
 
 type SceneAlert =
@@ -279,6 +282,11 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
     try {
       const res = await submitPalier({ palierAttemptId });
       setPalierResult(res as PalierResult);
+      track("palier_submitted", {
+        status: (res as PalierResult).status,
+        stars: (res as PalierResult).starsTotal,
+        palierIndex,
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -471,6 +479,18 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
               threshold={palierResult.threshold * 3}
             />
           </div>
+          {/* Boutique G7-V2 — pièces gagnées + trésor de zone */}
+          {validated && (palierResult.coinsEarned ?? 0) > 0 && (
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/25 px-4 py-1.5 font-game text-base font-bold backdrop-blur-sm">
+              +{palierResult.coinsEarned} 🪙 pour la boutique !
+            </p>
+          )}
+          {(palierResult.zoneTreasure ?? 0) > 0 && (
+            <p className="mt-2 font-game text-base font-bold">
+              🎁 Trésor de zone : +{palierResult.zoneTreasure} 🪙 — toute la
+              matière est terminée !
+            </p>
+          )}
         </motion.div>
 
         {!validated && palierResult.canRegen && !regenerating && (

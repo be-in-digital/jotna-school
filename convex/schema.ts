@@ -481,6 +481,21 @@ export default defineSchema({
   }).index("by_student_day", ["studentId", "dayKey"]),
 
   // ---------------------------------------------------------------------------
+  // studentItems — Redesign Gaming V2 (boutique G7-V2)
+  // Objets cosmétiques achetés avec des pièces : décos du camp + auras de
+  // Pio. Le solde de pièces vit dans profiles.preferences.coins (même
+  // pattern borné que questBonusStars).
+  // ---------------------------------------------------------------------------
+  studentItems: defineTable({
+    studentId: v.id("profiles"),
+    itemKey: v.string(),
+    purchasedAt: v.number(),
+    equipped: v.boolean(),
+  })
+    .index("by_student", ["studentId"])
+    .index("by_student_item", ["studentId", "itemKey"]),
+
+  // ---------------------------------------------------------------------------
   // parentSettings
   // Per-kid wellbeing toggles, owned by the parent profile. Decision 84
   // ---------------------------------------------------------------------------

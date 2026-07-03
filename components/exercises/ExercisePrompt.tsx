@@ -1,6 +1,8 @@
 "use client";
 
-import { Quote } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Quote, Volume2 } from "lucide-react";
+import { isTtsSupported, speak, stopSpeaking } from "@/lib/tts";
 
 /**
  * Renders an exercise prompt with a clean two-part layout when it contains
@@ -9,23 +11,52 @@ import { Quote } from "lucide-react";
  * Splits on the first ':' or '—' and, if the trailing part is an explicit
  * quoted sentence, displays the instruction on top and the sentence below
  * in a highlighted card.
+ *
+ * Accessibilité — bouton 🔊 : lit la consigne à voix haute (Web Speech,
+ * fr-FR) pour les lecteurs débutants. Indépendant des effets sonores.
  */
 export default function ExercisePrompt({ prompt }: { prompt: string }) {
   const { instruction, quoted } = parsePrompt(prompt);
+  const [ttsAvailable, setTtsAvailable] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setTtsAvailable(isTtsSupported()), 0);
+    return () => {
+      clearTimeout(t);
+      stopSpeaking();
+    };
+  }, []);
+
+  const readAloudButton = ttsAvailable ? (
+    <button
+      type="button"
+      onClick={() => speak(prompt)}
+      aria-label="Écouter la consigne"
+      className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-sky-200 bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100 active:scale-95"
+    >
+      <Volume2 className="h-4.5 w-4.5" aria-hidden />
+    </button>
+  ) : null;
 
   if (!quoted) {
     return (
-      <p className="text-xl font-bold text-amber-950 leading-relaxed">
-        {prompt}
-      </p>
+      <div className="flex items-start gap-3">
+        <p className="flex-1 text-xl font-bold text-amber-950 leading-relaxed">
+          {prompt}
+        </p>
+        {readAloudButton}
+      </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-xl font-bold text-amber-950 leading-relaxed">
-        {instruction}
-      </p>
+      <div className="flex items-start gap-3">
+        <p className="flex-1 text-xl font-bold text-amber-950 leading-relaxed">
+          {instruction}
+        </p>
+        {readAloudButton}
+      </div>
       <div className="flex items-start gap-3 rounded-2xl border-2 border-sky-200 bg-sky-50/70 px-5 py-4">
         <Quote className="mt-1 h-5 w-5 flex-shrink-0 text-sky-400" />
         <p className="text-lg font-medium text-sky-900 italic leading-relaxed">

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { Settings, Save, User, UserCircle } from "lucide-react";
+import { Settings, Save, User, UserCircle, Flame, Target } from "lucide-react";
 
 export default function ParentSettingsPage() {
   const profile = useQuery(api.profiles.getCurrentProfile);
@@ -160,6 +160,111 @@ export default function ParentSettingsPage() {
           )}
         </div>
       </form>
+
+      <KidsWellbeingSection />
+    </div>
+  );
+}
+
+/**
+ * Decision 84 — réglages bien-être PAR ENFANT (série 🔥 et missions du
+ * jour 🎯). Ces toggles existaient côté serveur sans aucune interface :
+ * les parents peuvent enfin les régler. Sauvegarde immédiate au clic.
+ */
+function KidsWellbeingSection() {
+  const kids = useQuery(api.parentSettings.getMyKidsSettings);
+  const updateSetting = useMutation(api.parentSettings.updateKidSetting);
+
+  if (!kids || kids.length === 0) return null;
+
+  return (
+    <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div>
+        <h2 className="font-semibold text-gray-900">Bien-être par enfant</h2>
+        <p className="mt-1 text-xs text-gray-500">
+          Désactivez la série ou les missions du jour si elles mettent trop
+          de pression à votre enfant. Effet immédiat.
+        </p>
+      </div>
+
+      {kids.map((kid) => (
+        <div
+          key={kid.kidId}
+          className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4"
+        >
+          <p className="font-medium text-gray-900">{kid.name}</p>
+
+          <WellbeingToggle
+            icon={<Flame className="h-4 w-4 text-orange-500" aria-hidden />}
+            label="Série de jours"
+            description="Le compteur de jours d'affilée (🔥) visible par l'enfant."
+            checked={kid.streaksEnabled}
+            onChange={(value) =>
+              updateSetting({
+                kidId: kid.kidId,
+                field: "streaksEnabled",
+                value,
+              })
+            }
+          />
+          <WellbeingToggle
+            icon={<Target className="h-4 w-4 text-amber-600" aria-hidden />}
+            label="Missions du jour"
+            description="Les 3 petites missions quotidiennes proposées par Pio."
+            checked={kid.dailyMissionEnabled}
+            onChange={(value) =>
+              updateSetting({
+                kidId: kid.kidId,
+                field: "dailyMissionEnabled",
+                value,
+              })
+            }
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WellbeingToggle({
+  icon,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start gap-2">
+        {icon}
+        <div>
+          <p className="text-sm font-medium text-gray-900">{label}</p>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+          checked ? "bg-teal-600" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
+          aria-hidden
+        />
+      </button>
     </div>
   );
 }

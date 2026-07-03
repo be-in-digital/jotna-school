@@ -20,6 +20,11 @@ import {
 } from "./paliers/scoring";
 import { shuffleDeterministic } from "./paliers";
 import { internal } from "./_generated/api";
+import {
+  awardZoneTreasureIfComplete,
+  creditCoins,
+  PALIER_BASE_COINS,
+} from "./shop";
 
 // ===========================================================================
 // Verification helpers — server-side only, never expose correctAnswer.
@@ -331,6 +336,8 @@ export const submitPalier = mutation({
 
     // Redesign Gaming G7 — a validated palier advances the matching quest
     // (no-op if daily missions are parent-disabled).
+    let coinsEarned = 0;
+    let zoneTreasure = 0;
     if (isValidated) {
       await ctx.runMutation(internal.quests.recordActivity, {
         studentId: profile._id,
@@ -341,6 +348,23 @@ export const submitPalier = mutation({
       await ctx.scheduler.runAfter(0, internal.badges.checkAndAward, {
         studentId: profile._id,
       });
+      // Boutique G7-V2 — pièces du palier + trésor de zone éventuel.
+      const freshProfile = await ctx.db.get(profile._id);
+      if (freshProfile) {
+        coinsEarned = PALIER_BASE_COINS + result.starsTotal;
+        await creditCoins(ctx, freshProfile, coinsEarned);
+        const palierDoc = await ctx.db.get(palierAttempt.palierId);
+        if (palierDoc) {
+          const afterCredit = await ctx.db.get(profile._id);
+          if (afterCredit) {
+            zoneTreasure = await awardZoneTreasureIfComplete(
+              ctx,
+              afterCredit,
+              palierDoc.subjectId,
+            );
+          }
+        }
+      }
     }
 
     // Cumulative regen check (Decision 60) — UI uses canRegen flag.
@@ -363,6 +387,9 @@ export const submitPalier = mutation({
       failedCount: failedIds.length,
       canRegen: !isValidated && cumulativeRegens < 3,
       cumulativeRegens,
+      // Boutique G7-V2 — affichés sur l'écran de résultat.
+      coinsEarned,
+      zoneTreasure,
     };
   },
 });

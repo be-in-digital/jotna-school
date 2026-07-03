@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { GamePanel } from "@/components/student/game/game-panel";
 import { kidMessages } from "@/lib/kidCopy";
 import { play } from "@/lib/sounds";
+import { track } from "@/lib/analytics";
 
 /**
  * Redesign Gaming G7 — the daily quest board on the hub.
@@ -60,6 +61,7 @@ export function QuestBoard() {
     ) {
       celebrate();
       void play("badge");
+      track("quest_completed", { completedToday: completedCount });
     }
     prevCompleted.current = completedCount;
   }, [completedCount]);
