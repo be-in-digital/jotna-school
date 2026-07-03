@@ -13,9 +13,10 @@ import { cn } from "@/lib/utils";
  * - c'est CET avatar qui incarne Pio partout, modales et dialogs inclus ;
  * - AUCUNE animation du corps.
  *
- * Les 8 états pointent pour l'instant vers la même pose v4 (les variantes
- * de poses pourront être régénérées depuis la référence quand Higgsfield
- * sera ré-authentifié). Le composant rend uniquement la pose courante.
+ * Les 8 états sont des poses distinctes générées depuis la référence
+ * (« EXACT same character », fond blanc, détourage local flood-fill) —
+ * l'explorateur garde sa loupe, sa chemise à l'étoile et sa sacoche dans
+ * chaque pose. Le composant rend uniquement la pose courante.
  */
 
 export type PioState =
