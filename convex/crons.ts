@@ -62,4 +62,15 @@ crons.cron(
   {},
 );
 
+// Decision 73 — pré-génère le palier 1 des thématiques JAMAIS générées
+// (topics ajoutés depuis la dernière passe), lundi 04:00 UTC. Évite que le
+// premier enfant d'un nouveau topic attende la génération IA. Ne re-génère
+// pas les paliers expirés (ceux-là se refont à la demande, à l'usage réel).
+crons.cron(
+  "warm palier 1 of new topics",
+  "0 4 * * 1",
+  internal.pregenPaliers.weeklyWarmNewTopics,
+  {},
+);
+
 export default crons;

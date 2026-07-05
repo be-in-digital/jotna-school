@@ -588,6 +588,9 @@ export const getBucket = action({
     topicId: v.id("topics"),
     palierIndex: v.number(),
     forceRegenerate: v.optional(v.boolean()),
+    // Tague le palier comme pré-généré (script/cron J0, convex/pregenPaliers).
+    // N'a aucun effet sur la boucle enfant — pur marqueur télémétrie.
+    markPreGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<{
     palierId: Id<"paliers">;
@@ -725,6 +728,7 @@ export const getBucket = action({
           totalChecked: factCheck.totalChecked,
           divergences: factCheck.divergences,
         },
+        preGenerated: args.markPreGenerated,
       },
     );
 

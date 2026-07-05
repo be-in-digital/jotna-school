@@ -38,6 +38,7 @@ import type * as paliers_scoring from "../paliers/scoring.js";
 import type * as parentSettings from "../parentSettings.js";
 import type * as pdfUploads from "../pdfUploads.js";
 import type * as pdfUploadsExtract from "../pdfUploadsExtract.js";
+import type * as pregenPaliers from "../pregenPaliers.js";
 import type * as profiles from "../profiles.js";
 import type * as progress from "../progress.js";
 import type * as promptAudio from "../promptAudio.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   parentSettings: typeof parentSettings;
   pdfUploads: typeof pdfUploads;
   pdfUploadsExtract: typeof pdfUploadsExtract;
+  pregenPaliers: typeof pregenPaliers;
   profiles: typeof profiles;
   progress: typeof progress;
   promptAudio: typeof promptAudio;
