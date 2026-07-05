@@ -1,20 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { classValidator } from "./classes";
 
 // ---------------------------------------------------------------------------
 // Class enum (curriculum stages, élémentaire sénégalais).
-// MVP-1 ships CE2 + CM1 only; the full enum is here so the schema is
-// forward-compatible with the public big-bang launch (Decision 14).
+// Canonical union lives in convex/classes.ts (shared with the frontend).
 // ---------------------------------------------------------------------------
-const classEnum = v.union(
-  v.literal("CI"),
-  v.literal("CP"),
-  v.literal("CE1"),
-  v.literal("CE2"),
-  v.literal("CM1"),
-  v.literal("CM2"),
-);
+const classEnum = classValidator;
 
 // ---------------------------------------------------------------------------
 // AI gateway purposes — mirrors aiGateway/registry.ts. Listed here as
@@ -47,6 +40,15 @@ export default defineSchema({
     // Parental consent for AI data processing (Loi 2008-12, Sénégal)
     aiDataConsentGranted: v.optional(v.boolean()),
     aiDataConsentGrantedAt: v.optional(v.number()),
+    // Classe de l'élève (rôle student uniquement). Demandée à l'inscription,
+    // elle filtre la carte + les topics et pilote la génération d'exercices.
+    // Absente sur les comptes créés avant la fonctionnalité : le ClassGate
+    // élève la réclame à la première visite.
+    class: v.optional(classEnum),
+    // Année scolaire ("2025-2026") où la classe a été confirmée. Quand
+    // l'année courante change (rentrée = 1er octobre), l'élève se voit
+    // proposer le passage dans la classe suivante — suivi de scolarité.
+    classSchoolYear: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
 
   // ---------------------------------------------------------------------------
@@ -120,6 +122,25 @@ export default defineSchema({
     needsManualReview: v.optional(v.boolean()), // Decision 53 — flagged by factCheck
     isVariation: v.optional(v.boolean()), // Decision 52
     originalExerciseId: v.optional(v.id("exercises")), // Decision 52 — traceability
+
+    // --------------------------------------------------------------------
+    // Consigne lue par Pio. MP3 pré-synthétisé (OpenAI TTS, même voix que
+    // « Pio t'explique ») une fois par exercice et servi à tous les enfants.
+    // Absent tant que la synthèse est en attente ou a échoué — le client
+    // retombe alors sur la voix du navigateur, jamais bloquant.
+    // --------------------------------------------------------------------
+    promptAudio: v.optional(
+      v.object({
+        storageId: v.id("_storage"),
+        voice: v.string(),
+        model: v.string(),
+        generatedAt: v.number(),
+        durationSeconds: v.optional(v.number()),
+      }),
+    ),
+    // Claim de synthèse (anti double-paiement quand deux enfants ouvrent le
+    // même palier en même temps). Périmé après 15 min → re-tentable.
+    promptAudioRequestedAt: v.optional(v.number()),
   })
     .index("by_topicId", ["topicId"])
     .index("by_palierId", ["palierId"])
@@ -401,9 +422,65 @@ export default defineSchema({
     intro: v.string(),
     steps: v.array(v.string()),
     conclusion: v.string(),
+    // One structured "board drawing" per step (chalk visual the explainer
+    // video draws on the blackboard: fraction pie, object groups, number
+    // line…). Chosen by the same AI call that writes the script; validated
+    // at render time — an invalid/missing spec falls back to a chalk note.
+    // Aligned with `steps` by index. Absent on legacy rows.
+    boardSpecs: v.optional(v.array(v.any())),
     generatedAt: v.number(),
     model: v.string(),
     traceId: v.optional(v.string()),
+    // --------------------------------------------------------------------
+    // "Pio t'explique" narrated audio track. Pre-synthesised (OpenAI TTS,
+    // Pio's voice) once per exercise and cached alongside the text, so the
+    // in-app explainer plays like a video (voix + poses + surlignage).
+    // One clip per narration segment, in play order [intro, ...steps,
+    // conclusion]. Absent while synthesis is pending or if it failed — the
+    // player falls back to the browser voice in that case.
+    // --------------------------------------------------------------------
+    audio: v.optional(
+      v.object({
+        voice: v.string(),
+        model: v.string(),
+        generatedAt: v.number(),
+        segments: v.array(
+          v.object({
+            storageId: v.id("_storage"),
+            text: v.string(),
+            role: v.union(
+              v.literal("intro"),
+              v.literal("step"),
+              v.literal("conclusion"),
+            ),
+            // Clip length probed at synthesis time so renderers don't have
+            // to re-download the MP3s. Absent on legacy segments.
+            durationSeconds: v.optional(v.number()),
+          }),
+        ),
+      }),
+    ),
+    // Claim timestamp for the video render (Remotion Lambda or the local
+    // worker) — prevents two renderers from paying for the same video.
+    // Stale after 15 min (crashed render), then re-claimable.
+    renderRequestedAt: v.optional(v.number()),
+    // --------------------------------------------------------------------
+    // Rendered explainer MP4 ("Pio au tableau"). Composed programmatically
+    // (Remotion) from the text script + Pio's TTS segments — by Remotion
+    // Lambda (convex/explainRender.ts) when configured, or by the local
+    // worker (scripts/render-explainer-videos.mjs). Absent while rendering
+    // is pending; the in-app narrated player is the fallback so kids are
+    // never blocked on the video.
+    // --------------------------------------------------------------------
+    video: v.optional(
+      v.object({
+        storageId: v.id("_storage"),
+        durationSeconds: v.number(),
+        width: v.number(),
+        height: v.number(),
+        renderedAt: v.number(),
+      }),
+    ),
   }).index("by_exercise", ["exerciseId"]),
 
   // ---------------------------------------------------------------------------

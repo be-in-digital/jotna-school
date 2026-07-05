@@ -175,7 +175,16 @@ export const getExercisesForPalier = query({
     for (const ex of exosByAttempt) finalSet.push(ex);
     finalSet.sort((a, b) => a.order - b.order);
 
-    return finalSet.map((ex) => stripAnswerFromExercise(ex, args.palierAttemptId));
+    // URL signée du MP3 « voix de Pio » de chaque consigne (null tant que la
+    // synthèse n'a pas abouti — le client lit alors avec la voix navigateur).
+    return await Promise.all(
+      finalSet.map(async (ex) => ({
+        ...stripAnswerFromExercise(ex, args.palierAttemptId),
+        promptAudioUrl: ex.promptAudio
+          ? await ctx.storage.getUrl(ex.promptAudio.storageId)
+          : null,
+      })),
+    );
   },
 });
 
@@ -401,7 +410,18 @@ export const insertGeneratedExercises = internalMutation({
         needsManualReview: ex.needsManualReview === true,
       });
       ids.push(id);
+      // Produce Pio's "explique" video (script + narrated audio) alongside the
+      // exercise, so it's ready before any kid needs it. Non-blocking.
+      await ctx.scheduler.runAfter(
+        0,
+        internal.explainMistake.pregenerateForExercise,
+        { exerciseId: id },
+      );
     }
+    // Voix de Pio sur les 10 consignes — un lot, non bloquant.
+    await ctx.scheduler.runAfter(0, internal.promptAudio.synthesizeForExercises, {
+      exerciseIds: ids,
+    });
     return ids;
   },
 });
@@ -449,7 +469,17 @@ export const replaceFailedWithVariations = internalMutation({
         needsManualReview: v.needsManualReview === true,
       });
       ids.push(id);
+      // Same eager "Pio t'explique" generation for regenerated variations.
+      await ctx.scheduler.runAfter(
+        0,
+        internal.explainMistake.pregenerateForExercise,
+        { exerciseId: id },
+      );
     }
+    // Les variations aussi sont lues par Pio.
+    await ctx.scheduler.runAfter(0, internal.promptAudio.synthesizeForExercises, {
+      exerciseIds: ids,
+    });
     return ids;
   },
 });
@@ -630,12 +660,14 @@ export const getBucket = action({
     const systemPrompt = buildPalierBaseSystemPrompt({
       subject: subject.subjectName,
       topic: subject.topic.name,
+      topicDescription: subject.topic.description,
       class: args.class,
       palierIndex: args.palierIndex,
     });
     const userPrompt = buildPalierBasePrompt({
       subject: subject.subjectName,
       topic: subject.topic.name,
+      topicDescription: subject.topic.description,
       class: args.class,
       palierIndex: args.palierIndex,
     });
@@ -718,7 +750,11 @@ export const getSubjectAndTopic = internalQuery({
     if (!subject || !topic) return null;
     return {
       subjectName: subject.name,
-      topic: { _id: topic._id, name: topic.name },
+      topic: {
+        _id: topic._id,
+        name: topic.name,
+        description: topic.description,
+      },
     };
   },
 });
@@ -966,6 +1002,24 @@ export const startPalierAttempt = mutation({
           );
         }
       }
+    }
+
+    // Rattrapage voix de Pio : les paliers générés avant la fonctionnalité
+    // (ou dont la synthèse a échoué) obtiennent leurs MP3 de consignes à la
+    // première ouverture. Le claim côté action déduplique les concurrents.
+    const palierExos = await ctx.db
+      .query("exercises")
+      .withIndex("by_palierId", (q) => q.eq("palierId", args.palierId))
+      .take(50);
+    const missingAudio = palierExos
+      .filter((e) => !e.promptAudio)
+      .map((e) => e._id);
+    if (missingAudio.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.promptAudio.synthesizeForExercises,
+        { exerciseIds: missingAudio },
+      );
     }
 
     const inProgressAttempts = (

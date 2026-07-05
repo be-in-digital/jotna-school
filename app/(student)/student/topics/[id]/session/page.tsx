@@ -20,7 +20,19 @@ import {
 import Link from "next/link";
 
 import { JotnaLoader } from "@/components/jotna-loader";
-import { playCorrect, setSoundEnabledLocal } from "@/lib/sounds";
+import { playComboBlip, playCorrect, setSoundEnabledLocal } from "@/lib/sounds";
+import {
+  clearPioAudio,
+  registerPioAudio,
+  setEarlyReaderMode,
+} from "@/lib/tts";
+import { hapticCombo, hapticError, hapticSuccess } from "@/lib/haptics";
+import {
+  ComboBadge,
+  RewardBurst,
+  SessionPioBuddy,
+  type BuddyMood,
+} from "@/components/student/session-fx";
 import { PalierStarsBar } from "@/components/star-rating";
 import { CapRegenAlternatives } from "@/components/cap-regen-alternatives";
 import { kidMessages } from "@/lib/kidCopy";
@@ -47,6 +59,9 @@ type SanitizedExo = {
   hintsAvailable: number;
   palierAttemptId: Id<"palierAttempts">;
   isVariation: boolean;
+  // MP3 « voix de Pio » de la consigne — null tant que la synthèse n'est pas
+  // terminée (speak() retombe alors sur la voix du navigateur).
+  promptAudioUrl: string | null;
 };
 
 type PalierResult = {
@@ -144,10 +159,33 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
   const [sceneAlert, setSceneAlert] = useState<SceneAlert | null>(null);
   const [localStateAttemptId, setLocalStateAttemptId] =
     useState<Id<"palierAttempts"> | null>(null);
-  // Step-by-step explanation panel — opened when the kid taps
-  // "Je veux comprendre" after exhausting all 5 attempts on an exercise.
+  // "Pio t'explique" panel — opened either after 5 failed attempts
+  // ("Je veux comprendre", variant "stuck") or after a correct answer
+  // ("Pio m'explique", variant "review").
   const [explainOpen, setExplainOpen] = useState(false);
+  const [explainVariant, setExplainVariant] = useState<"stuck" | "review">(
+    "stuck",
+  );
+  // Auto-advance timer after a correct answer — cancelled if the kid opens the
+  // review explainer, so Pio's video isn't cut off mid-sentence.
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+
+  // Dynamic feedback FX (companion Pio + combo + reward burst). Combo counts
+  // consecutive correct answers within this session; it is purely visual and
+  // resets on any wrong answer.
+  const [combo, setCombo] = useState(0);
+  const [pioMood, setPioMood] = useState<BuddyMood>("solving");
+  const [pioBubble, setPioBubble] = useState<string | null>(null);
+  const [reactKey, setReactKey] = useState(0);
+  const [burstKey, setBurstKey] = useState(0);
+
+  // Clear any pending auto-advance timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
 
   // Network status (Decision 90)
   useEffect(() => {
@@ -167,6 +205,28 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
       setSoundEnabledLocal(soundPref.soundEnabled);
     }
   }, [soundPref?.soundEnabled]);
+
+  // Lecteurs débutants (CI/CP) : les consignes sont lues automatiquement et
+  // le bouton « Écouter » devient une pastille visible (ExercisePrompt).
+  useEffect(() => {
+    setEarlyReaderMode(topic?.class === "CI" || topic?.class === "CP");
+    return () => setEarlyReaderMode(false);
+  }, [topic?.class]);
+
+  // Voix de Pio : enregistre les MP3 des consignes au fil de leur arrivée
+  // (la query est réactive — les URLs apparaissent quand la synthèse finit).
+  // speak() les utilisera automatiquement à la place de la voix navigateur.
+  useEffect(() => {
+    if (!exercises) return;
+    registerPioAudio(
+      exercises
+        .filter((e) => e.promptAudioUrl)
+        .map((e) => ({ text: e.prompt, url: e.promptAudioUrl as string })),
+    );
+  }, [exercises]);
+  useEffect(() => {
+    return () => clearPioAudio();
+  }, []);
 
   const handleToggleSound = useCallback(async () => {
     const next = !(soundPref?.soundEnabled ?? false);
@@ -272,6 +332,9 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
     setHintShown(null);
     setLocalHintsUsedThisExo(0);
     setLocalFailedAttemptsThisExo(0);
+    // New exercise → Pio back to the attentive pose (combo persists).
+    setPioMood("solving");
+    setPioBubble(null);
     if (currentIndex < exercises.length - 1) {
       setLocalCurrentIndex(currentIndex + 1);
       return;
@@ -316,12 +379,51 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
         if (res.isCorrect) {
           setLocalStateAttemptId(palierAttemptId);
           void playCorrect();
-          setTimeout(() => nextExoRef.current(), 1200);
+          // Dynamic reward FX: bump the combo, celebrate, spray stars, buzz.
+          const nextCombo = combo + 1;
+          setCombo(nextCombo);
+          setPioMood("correct");
+          setReactKey((k) => k + 1);
+          setBurstKey((k) => k + 1);
+          hapticSuccess();
+          if (nextCombo >= 2) {
+            playComboBlip(nextCombo);
+            if (nextCombo === 3 || nextCombo === 5 || nextCombo % 10 === 0) {
+              hapticCombo();
+              setPioBubble(
+                nextCombo >= 10
+                  ? "Incroyable !"
+                  : nextCombo >= 5
+                    ? "Tu es en feu !"
+                    : "Super série !",
+              );
+            } else {
+              setPioBubble(null);
+            }
+          } else {
+            setPioBubble(null);
+          }
+          if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+          // Slightly longer so the discreet "Pio m'explique" button is
+          // reachable for a curious kid, still snappy for everyone else.
+          advanceTimerRef.current = setTimeout(
+            () => nextExoRef.current(),
+            2200,
+          );
         } else {
           setLocalStateAttemptId(palierAttemptId);
           setLocalFailedAttemptsThisExo(failedAttemptsThisExo + 1);
+          // Break the combo, Pio encourages, gentle buzz — no fail sound (D9).
+          setCombo(0);
+          setPioMood("wrong");
+          setPioBubble(null);
+          setReactKey((k) => k + 1);
+          hapticError();
           if (res.attemptsRemaining > 0) {
-            setTimeout(() => setFeedback(null), 2500);
+            setTimeout(() => {
+              setFeedback(null);
+              setPioMood("solving");
+            }, 2500);
           }
         }
       } catch (err) {
@@ -334,6 +436,7 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
       currentIndex,
       failedAttemptsThisExo,
       verifyAttempt,
+      combo,
     ],
   );
 
@@ -349,6 +452,9 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
       setHintShown(null);
       setLocalHintsUsedThisExo(0);
       setLocalFailedAttemptsThisExo(0);
+      setCombo(0);
+      setPioMood("solving");
+      setPioBubble(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur";
       setSceneAlert({ type: "regen-error", message: msg });
@@ -572,6 +678,13 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
 
   return (
     <div className="relative mx-auto max-w-2xl py-4">
+      {/* Dynamic feedback FX — companion Pio, combo badge, reward burst.
+          All non-blocking overlays; each self-disables on lite devices /
+          reduced-motion. */}
+      <SessionPioBuddy mood={pioMood} reactKey={reactKey} bubble={pioBubble} />
+      <ComboBadge combo={combo} />
+      <RewardBurst triggerKey={burstKey} />
+
       {/* Network drop banner (Decision 90) */}
       {!isOnline && (
         <div className="mb-3 flex items-center gap-2 rounded-xl bg-yellow-100 px-4 py-2 text-sm text-yellow-800">
@@ -649,6 +762,14 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
+          // Pio perks up (attentive pose replay) the moment the kid starts
+          // interacting with the exercise.
+          onPointerDown={() => {
+            if (!feedback) {
+              setPioMood("solving");
+              setReactKey((k) => k + 1);
+            }
+          }}
           className="rounded-3xl border-2 border-amber-200 bg-white/95 p-6 shadow-[0_6px_0_rgba(217,119,6,0.15)]"
         >
           <ExerciseRenderer
@@ -716,11 +837,31 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
                       ? `Pas tout à fait…`
                       : "Tu peux passer à la suite."}
                 </div>
+                {feedback.correct && exo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (advanceTimerRef.current) {
+                        clearTimeout(advanceTimerRef.current);
+                        advanceTimerRef.current = null;
+                      }
+                      setExplainVariant("review");
+                      setExplainOpen(true);
+                    }}
+                    className="mx-auto flex items-center gap-1.5 rounded-full border-2 border-amber-200 bg-white/85 px-4 py-1.5 font-game text-xs font-semibold text-amber-900/80 shadow-sm transition-all hover:bg-white active:translate-y-[1px]"
+                  >
+                    <Lightbulb className="h-4 w-4" aria-hidden />
+                    Pio m&apos;explique
+                  </button>
+                )}
                 {!feedback.correct && feedback.attemptsRemaining === 0 && (
                   <>
                     <GameButton
                       variant="ghost"
-                      onClick={() => setExplainOpen(true)}
+                      onClick={() => {
+                        setExplainVariant("stuck");
+                        setExplainOpen(true);
+                      }}
                       disabled={submitting}
                       className="w-full"
                     >
@@ -756,7 +897,12 @@ function PalierSession({ topicId, palierIndex }: { topicId: string; palierIndex:
           key={exo._id}
           exerciseId={exo._id}
           open={explainOpen}
-          onClose={() => setExplainOpen(false)}
+          variant={explainVariant}
+          onClose={() => {
+            setExplainOpen(false);
+            // Closing the post-success explainer resumes the loop.
+            if (explainVariant === "review") nextExoRef.current();
+          }}
         />
       )}
       <SceneAlertDialog

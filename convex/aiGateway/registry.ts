@@ -65,9 +65,10 @@ const REGISTRY: Record<AiPurpose, PurposeConfig> = {
   },
   explain_mistake: {
     defaultModel: "gpt-4o-mini",
-    maxOutputTokens: 800,
+    // Headroom for up to 8 rich steps — comprehensibility over brevity.
+    maxOutputTokens: 2000,
     temperature: 0.5,
-    requestTimeoutMs: 10_000,
+    requestTimeoutMs: 30_000,
     retries: 1,
     ...GPT_4O_MINI,
   },

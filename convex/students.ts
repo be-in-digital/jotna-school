@@ -488,12 +488,26 @@ export const getMyWorldMap = query({
       currentSubjectId = (palier?.subjectId as string) ?? null;
     }
 
+    // La carte est filtrée sur la classe de l'élève : un CP ne voit que les
+    // topics CP. Sans classe (compte d'avant la fonctionnalité, le ClassGate
+    // la demandera), on garde l'ancien comportement — tous les topics.
+    const studentClass = profile.class ?? null;
+
     const zones = [];
     for (const subject of subjects) {
-      const topics = await ctx.db
-        .query("topics")
-        .withIndex("by_subjectId", (q) => q.eq("subjectId", subject._id))
-        .take(200);
+      const topics = studentClass
+        ? await ctx.db
+            .query("topics")
+            .withIndex("by_subjectId_class", (q) =>
+              q.eq("subjectId", subject._id).eq("class", studentClass),
+            )
+            .take(200)
+        : await ctx.db
+            .query("topics")
+            .withIndex("by_subjectId", (q) => q.eq("subjectId", subject._id))
+            .take(200);
+      // Zone sans contenu pour cette classe → masquée (pas de zone vide).
+      if (studentClass && topics.length === 0) continue;
       const completedTopics = topics.filter((t) =>
         completedTopicIds.has(t._id as string),
       ).length;
@@ -597,6 +611,9 @@ export const getMyResumeTarget = query({
     for (const attempt of inProgress) {
       const palier = await ctx.db.get(attempt.palierId);
       if (!palier) continue;
+      // Après un passage de classe, on ne propose pas de reprendre un palier
+      // de l'ancienne classe — la carte filtrée prendra le relais.
+      if (profile.class && palier.class !== profile.class) continue;
       const topic = await ctx.db.get(palier.topicId);
       if (!topic) continue;
       const subject = await ctx.db.get(topic.subjectId);
@@ -788,10 +805,20 @@ export const getStudentSubjectMap = query({
     const subject = await ctx.db.get(args.subjectId);
     if (!subject) return null;
 
-    const topics = await ctx.db
-      .query("topics")
-      .withIndex("by_subjectId", (q) => q.eq("subjectId", args.subjectId))
-      .take(200);
+    // Même règle que getMyWorldMap : la piste ne montre que les topics de la
+    // classe de l'élève ; sans classe déclarée, tous les topics (legacy).
+    const studentClass = profile.class ?? null;
+    const topics = studentClass
+      ? await ctx.db
+          .query("topics")
+          .withIndex("by_subjectId_class", (q) =>
+            q.eq("subjectId", args.subjectId).eq("class", studentClass),
+          )
+          .take(200)
+      : await ctx.db
+          .query("topics")
+          .withIndex("by_subjectId", (q) => q.eq("subjectId", args.subjectId))
+          .take(200);
     topics.sort((a, b) => a.order - b.order);
 
     const allProgress = await ctx.db

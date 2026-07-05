@@ -304,3 +304,71 @@ export const createDrafts = internalMutation({
     return ids;
   },
 });
+
+// ---------------------------------------------------------------------------
+// Voix de Pio sur les consignes (promptAudio)
+// Côté V8 de convex/promptAudio.ts (action node) : claim anti-doublon puis
+// rattachement du MP3 synthétisé. Le claim expire après 15 min (synthèse
+// plantée) pour rester re-tentable.
+// ---------------------------------------------------------------------------
+
+const PROMPT_AUDIO_CLAIM_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * Réserve les exercices à voix manquante parmi `exerciseIds` et renvoie
+ * (id, consigne) pour la synthèse. Les exercices déjà sonorisés ou réservés
+ * il y a moins de 15 min sont ignorés — deux enfants qui ouvrent le même
+ * palier au même moment ne paient qu'une synthèse.
+ */
+export const claimForPromptAudio = internalMutation({
+  args: { exerciseIds: v.array(v.id("exercises")) },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const claimed: Array<{ exerciseId: string; prompt: string }> = [];
+    for (const id of args.exerciseIds) {
+      const ex = await ctx.db.get(id);
+      if (!ex || ex.promptAudio) continue;
+      if (
+        ex.promptAudioRequestedAt !== undefined &&
+        now - ex.promptAudioRequestedAt < PROMPT_AUDIO_CLAIM_TTL_MS
+      ) {
+        continue;
+      }
+      await ctx.db.patch(id, { promptAudioRequestedAt: now });
+      claimed.push({ exerciseId: id, prompt: ex.prompt });
+    }
+    return claimed;
+  },
+});
+
+/** Rattache le MP3 de la consigne. Supprime le blob si l'exo a disparu. */
+export const attachPromptAudio = internalMutation({
+  args: {
+    exerciseId: v.id("exercises"),
+    storageId: v.id("_storage"),
+    voice: v.string(),
+    model: v.string(),
+    durationSeconds: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const ex = await ctx.db.get(args.exerciseId);
+    if (!ex) {
+      await ctx.storage.delete(args.storageId);
+      return;
+    }
+    if (ex.promptAudio) {
+      // Course perdue contre une autre synthèse — on garde la première.
+      await ctx.storage.delete(args.storageId);
+      return;
+    }
+    await ctx.db.patch(args.exerciseId, {
+      promptAudio: {
+        storageId: args.storageId,
+        voice: args.voice,
+        model: args.model,
+        generatedAt: Date.now(),
+        durationSeconds: args.durationSeconds,
+      },
+    });
+  },
+});

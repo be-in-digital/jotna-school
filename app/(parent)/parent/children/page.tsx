@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import {
@@ -12,8 +13,14 @@ import {
   Plus,
   LinkIcon,
   Clock,
+  GraduationCap,
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
+import {
+  CLASS_LEVELS,
+  CLASS_LABELS,
+  type ClassLevel,
+} from "@/convex/classes";
 
 export default function ParentChildrenPage() {
   const profile = useQuery(api.profiles.getCurrentProfile);
@@ -132,6 +139,7 @@ export default function ParentChildrenPage() {
                 childId={child._id as Id<"profiles">}
                 name={child.name}
                 avatar={child.avatar}
+                studentClass={(child.class ?? null) as ClassLevel | null}
               />
             ))}
         </div>
@@ -144,14 +152,34 @@ function ChildCard({
   childId,
   name,
   avatar,
+  studentClass,
 }: {
   childId: Id<"profiles">;
   name: string;
   avatar?: string;
+  studentClass: ClassLevel | null;
 }) {
   const reports = useQuery(api.reports.listByStudent, {
     studentId: childId,
   });
+  const setStudentClass = useMutation(api.profiles.setStudentClass);
+  const [savingClass, setSavingClass] = useState(false);
+  const [classError, setClassError] = useState<string | null>(null);
+
+  const handleClassChange = async (value: string) => {
+    setSavingClass(true);
+    setClassError(null);
+    try {
+      await setStudentClass({
+        studentId: childId,
+        class: value as ClassLevel,
+      });
+    } catch {
+      setClassError("Impossible de modifier la classe.");
+    } finally {
+      setSavingClass(false);
+    }
+  };
 
   const topicsCompleted = reports?.length ?? 0;
   const averageScore =
@@ -183,6 +211,32 @@ function ChildCard({
           </p>
         </div>
       </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <GraduationCap className="h-4 w-4 shrink-0 text-teal-600" aria-hidden />
+        <label htmlFor={`class-${childId}`} className="sr-only">
+          Classe de {name}
+        </label>
+        <select
+          id={`class-${childId}`}
+          value={studentClass ?? ""}
+          disabled={savingClass}
+          onChange={(e) => handleClassChange(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:opacity-50"
+        >
+          <option value="" disabled>
+            Classe non définie
+          </option>
+          {CLASS_LEVELS.map((c) => (
+            <option key={c} value={c}>
+              {CLASS_LABELS[c]}
+            </option>
+          ))}
+        </select>
+      </div>
+      {classError && (
+        <p className="mt-1 text-xs text-red-600">{classError}</p>
+      )}
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-teal-50 p-3 text-center">

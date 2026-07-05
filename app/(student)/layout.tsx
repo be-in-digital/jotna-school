@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { UserMenu } from "@/components/ui/user-menu";
 import { Brand } from "@/components/landing/brand";
+import { ClassGate } from "@/components/student/class-gate";
 import { MotionConfig } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,10 @@ export default function StudentLayout({
 
         {/* D5 — game dock: mobile only. Hidden during focus mode. */}
         {!focusMode && <GameDock pathname={pathname} />}
+
+        {/* Classe manquante ou nouvelle année scolaire — bloquant, mais
+            jamais au milieu d'une session d'exercices (mode focus). */}
+        {!focusMode && <ClassGate />}
       </div>
     </MotionConfig>
   );

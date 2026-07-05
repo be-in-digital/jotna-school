@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { classValidator } from "./classes";
 
 export const listAll = query({
   args: {},
@@ -32,6 +33,7 @@ export const create = mutation({
     name: v.string(),
     description: v.string(),
     order: v.number(),
+    class: v.optional(classValidator),
   },
   handler: async (ctx, args) => {
     // Verify subject exists
@@ -44,6 +46,7 @@ export const create = mutation({
       name: args.name,
       description: args.description,
       order: args.order,
+      ...(args.class !== undefined ? { class: args.class } : {}),
     });
   },
 });
@@ -54,6 +57,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     order: v.optional(v.number()),
+    class: v.optional(classValidator),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;

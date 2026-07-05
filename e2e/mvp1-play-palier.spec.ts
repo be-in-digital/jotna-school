@@ -20,7 +20,9 @@ async function registerAndLogin(page: Page): Promise<void> {
   const passwordFields = page.locator('input[type="password"]');
   await passwordFields.nth(0).fill(password);
   await passwordFields.nth(1).fill(password);
-  await page.locator("select").selectOption("student");
+  await page.locator("select").first().selectOption("student");
+  // Le select classe apparaît une fois le rôle élève choisi (obligatoire).
+  await page.locator("select").nth(1).selectOption("CE2");
   await page.getByRole("button", { name: /Créer un compte|S'inscrire/i }).first().click();
 
   await page.waitForFunction(() => !location.pathname.includes("/register"), {

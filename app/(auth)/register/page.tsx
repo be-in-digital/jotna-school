@@ -4,6 +4,11 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  CLASS_LEVELS,
+  CLASS_LABELS,
+  type ClassLevel,
+} from "@/convex/classes";
 
 export default function RegisterPage() {
   const { signIn } = useAuthActions();
@@ -16,6 +21,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState<"parent" | "student" | "professeur">(
     "parent",
   );
+  const [studentClass, setStudentClass] = useState<ClassLevel | "">("");
   const [aiConsent, setAiConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,9 +35,21 @@ export default function RegisterPage() {
       return;
     }
 
+    if (role === "student" && !studentClass) {
+      setError("Choisis ta classe pour avoir des exercices à ton niveau.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await signIn("password", { email, password, name, role, flow: "signUp" });
+      await signIn("password", {
+        email,
+        password,
+        name,
+        role,
+        flow: "signUp",
+        ...(role === "student" ? { studentClass } : {}),
+      });
       window.location.href = "/post-auth";
     } catch {
       setError("Impossible de créer le compte. Vérifiez vos informations.");
@@ -130,6 +148,31 @@ export default function RegisterPage() {
           <option value="professeur">Professeur</option>
         </select>
       </div>
+
+      {role === "student" && (
+        <div>
+          <label className="block text-sm font-medium mb-1">Classe</label>
+          <select
+            required
+            value={studentClass}
+            onChange={(e) => setStudentClass(e.target.value as ClassLevel)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option value="" disabled>
+              Choisis ta classe…
+            </option>
+            {CLASS_LEVELS.map((c) => (
+              <option key={c} value={c}>
+                {CLASS_LABELS[c]}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Les exercices s&apos;adaptent à ta classe et te suivront chaque
+            année.
+          </p>
+        </div>
+      )}
 
       <button
         type="submit"

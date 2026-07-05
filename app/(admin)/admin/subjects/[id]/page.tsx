@@ -14,6 +14,11 @@ import {
   Save,
   X,
 } from "lucide-react";
+import {
+  CLASS_LEVELS,
+  CLASS_LABELS,
+  type ClassLevel,
+} from "@/convex/classes";
 
 export default function SubjectDetailPage({
   params,
@@ -39,6 +44,7 @@ export default function SubjectDetailPage({
   const [topicName, setTopicName] = useState("");
   const [topicDescription, setTopicDescription] = useState("");
   const [topicOrder, setTopicOrder] = useState(0);
+  const [topicClass, setTopicClass] = useState<ClassLevel | "">("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -85,10 +91,12 @@ export default function SubjectDetailPage({
         name: topicName,
         description: topicDescription,
         order: topicOrder,
+        ...(topicClass ? { class: topicClass } : {}),
       });
       setTopicName("");
       setTopicDescription("");
       setTopicOrder(0);
+      setTopicClass("");
       setShowTopicForm(false);
     } catch (err) {
       setError(
@@ -325,16 +333,43 @@ export default function SubjectDetailPage({
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none"
               />
             </div>
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ordre
-              </label>
-              <input
-                type="number"
-                value={topicOrder}
-                onChange={(e) => setTopicOrder(Number(e.target.value))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Classe
+                </label>
+                <select
+                  required
+                  value={topicClass}
+                  onChange={(e) =>
+                    setTopicClass(e.target.value as ClassLevel)
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="" disabled>
+                    Sélectionnez la classe…
+                  </option>
+                  {CLASS_LEVELS.map((c) => (
+                    <option key={c} value={c}>
+                      {CLASS_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Seuls les élèves de cette classe verront la thématique.
+                </p>
+              </div>
+              <div className="w-32">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ordre
+                </label>
+                <input
+                  type="number"
+                  value={topicOrder}
+                  onChange={(e) => setTopicOrder(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <button
@@ -375,7 +410,20 @@ export default function SubjectDetailPage({
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">{topic.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900">
+                      {topic.name}
+                    </h3>
+                    {topic.class ? (
+                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                        {topic.class}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        Sans classe
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-sm text-gray-500">
                     {topic.description}
                   </p>

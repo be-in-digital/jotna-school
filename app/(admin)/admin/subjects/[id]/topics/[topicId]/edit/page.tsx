@@ -7,6 +7,11 @@ import { use } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  CLASS_LEVELS,
+  CLASS_LABELS,
+  type ClassLevel,
+} from "@/convex/classes";
 
 export default function TopicEditPage({
   params,
@@ -22,6 +27,7 @@ export default function TopicEditPage({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [order, setOrder] = useState(0);
+  const [topicClass, setTopicClass] = useState<ClassLevel | "">("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -31,6 +37,7 @@ export default function TopicEditPage({
       setName(topic.name);
       setDescription(topic.description);
       setOrder(topic.order);
+      setTopicClass((topic.class ?? "") as ClassLevel | "");
       setInitialized(true);
     }
   }, [topic, initialized]);
@@ -45,6 +52,7 @@ export default function TopicEditPage({
         name,
         description,
         order,
+        ...(topicClass ? { class: topicClass } : {}),
       });
       router.push(`/admin/subjects/${id}`);
     } catch (err) {
@@ -140,16 +148,40 @@ export default function TopicEditPage({
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none"
               />
             </div>
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ordre
-              </label>
-              <input
-                type="number"
-                value={order}
-                onChange={(e) => setOrder(Number(e.target.value))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Classe
+                </label>
+                <select
+                  required
+                  value={topicClass}
+                  onChange={(e) =>
+                    setTopicClass(e.target.value as ClassLevel)
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="" disabled>
+                    Sélectionnez la classe…
+                  </option>
+                  {CLASS_LEVELS.map((c) => (
+                    <option key={c} value={c}>
+                      {CLASS_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-32">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ordre
+                </label>
+                <input
+                  type="number"
+                  value={order}
+                  onChange={(e) => setOrder(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
             </div>
             <div className="flex gap-3 pt-4">
               <button

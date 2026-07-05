@@ -2,6 +2,7 @@ import { query, mutation, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { createAccount, getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import { classValidator, currentSchoolYear } from "./classes";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -162,6 +163,55 @@ export const updateProfile = mutation({
 });
 
 /**
+ * Définit ou met à jour la classe d'un élève (suivi de scolarité).
+ *
+ * Sans `studentId`, cible le profil de l'appelant (gate élève, rentrée).
+ * Avec `studentId`, l'appelant doit être admin ou tuteur lié (parent,
+ * tuteur ou professeur via studentGuardians).
+ *
+ * Tamponne `classSchoolYear` avec l'année scolaire courante : le ClassGate
+ * ne re-proposera le passage de classe qu'à la prochaine rentrée.
+ */
+export const setStudentClass = mutation({
+  args: {
+    studentId: v.optional(v.id("profiles")),
+    class: classValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Non authentifié");
+    const caller = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+      .unique();
+    if (!caller) throw new Error("Profil introuvable");
+
+    const target = args.studentId ? await ctx.db.get(args.studentId) : caller;
+    if (!target || target.role !== "student") {
+      throw new Error("Profil élève introuvable");
+    }
+
+    const isSelf = target._id === caller._id;
+    let authorized = isSelf || caller.role === "admin";
+    if (!authorized) {
+      const links = await ctx.db
+        .query("studentGuardians")
+        .withIndex("by_studentId", (q) => q.eq("studentId", target._id))
+        .take(50);
+      authorized = links.some((l) => l.guardianId === caller._id);
+    }
+    if (!authorized) {
+      throw new Error("Vous n'êtes pas autorisé à modifier cette classe");
+    }
+
+    await ctx.db.patch(target._id, {
+      class: args.class,
+      classSchoolYear: currentSchoolYear(),
+    });
+  },
+});
+
+/**
  * Create a child account from the parent's session, without altering that session.
  *
  * Uses Convex Auth's `createAccount` helper to create the child's auth
@@ -174,6 +224,7 @@ export const createChildAccount = action({
     name: v.string(),
     email: v.string(),
     password: v.string(),
+    class: v.optional(classValidator),
   },
   handler: async (
     ctx,
@@ -198,6 +249,9 @@ export const createChildAccount = action({
         email: args.email,
         name: args.name,
         role: "student",
+        // Lu par createOrUpdateUser (convex/auth.ts) qui le stocke sur le
+        // profil élève — même canal que le rôle.
+        studentClass: args.class ?? "",
       } as unknown as Parameters<typeof createAccount>[1]["profile"],
     });
 

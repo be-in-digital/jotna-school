@@ -46,3 +46,6 @@ next-env.d.ts
 
 # CodeGraph index (local code intelligence)
 .codegraph/
+
+# remotion render worker
+/.render/

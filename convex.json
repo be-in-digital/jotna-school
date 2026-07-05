@@ -1,0 +1,5 @@
+{
+  "node": {
+    "externalPackages": ["@remotion/lambda-client", "music-metadata"]
+  }
+}

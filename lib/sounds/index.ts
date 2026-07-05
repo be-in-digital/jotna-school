@@ -191,3 +191,61 @@ function attachOnlineRetry(): void {
 export const playCorrect = (): Promise<void> => play("correct");
 export const playBadge = (): Promise<void> => play("badge");
 export const playLevelUp = (): Promise<void> => play("levelUp");
+
+// ---------------------------------------------------------------------------
+// Combo blip — a short rising chime for consecutive correct answers, pitched
+// up with the combo level (Duolingo-style). Synthesised with Web Audio so it
+// needs zero new asset files and stays tiny. Positive only (D9). Respects the
+// same server-backed opt-in memo as sampled sounds; created lazily and reused.
+// ---------------------------------------------------------------------------
+
+let audioCtx: AudioContext | null = null;
+
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctor) return null;
+    if (!audioCtx) audioCtx = new Ctor();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    return audioCtx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Play a short combo chime. `level` is the combo count (2, 3, 4…); the pitch
+ * climbs a semitone-ish per level, capped so it never gets shrill. No-op when
+ * sound is disabled or Web Audio is unavailable. Never throws.
+ */
+export function playComboBlip(level: number): void {
+  if (!soundEnabledMemo) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const step = Math.min(Math.max(level - 2, 0), 10);
+    const base = 523.25; // C5
+    const freq = base * Math.pow(2, step / 12); // +1 semitone per combo level
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.12);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(VOLUME * 0.5, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.24);
+  } catch {
+    // Swallow — never surface audio failures.
+  }
+}

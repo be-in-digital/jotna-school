@@ -9,6 +9,7 @@ import {
   Heart,
   UserCircle,
   Flame,
+  GraduationCap,
   Volume2,
   VolumeX,
   Sparkles,
@@ -119,6 +120,13 @@ export default function StudentProfilePage() {
           <h1 className="mt-3 text-center font-game text-2xl font-bold text-amber-950">
             {stats.student.name}
           </h1>
+
+          {stats.student.class && (
+            <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border-2 border-sky-200 bg-sky-50 px-3 py-0.5 font-game text-sm font-bold text-sky-700">
+              <GraduationCap className="h-4 w-4" aria-hidden />
+              Classe de {stats.student.class}
+            </span>
+          )}
 
           {(stats.exosToNextLevel ?? 0) > 0 && (
             <p className="mt-1 text-center text-xs font-medium text-amber-900/60">

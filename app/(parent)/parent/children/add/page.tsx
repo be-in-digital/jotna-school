@@ -6,6 +6,11 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import Link from "next/link";
+import {
+  CLASS_LEVELS,
+  CLASS_LABELS,
+  type ClassLevel,
+} from "@/convex/classes";
 
 export default function AddChildPage() {
   const router = useRouter();
@@ -16,6 +21,7 @@ export default function AddChildPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [childClass, setChildClass] = useState<ClassLevel | "">("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,11 +29,16 @@ export default function AddChildPage() {
     e.preventDefault();
     if (!profile) return;
 
+    if (!childClass) {
+      setError("Choisissez la classe de votre enfant.");
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
     try {
-      await createChildAccount({ name, email, password });
+      await createChildAccount({ name, email, password, class: childClass });
       router.push("/parent/dashboard");
     } catch (err) {
       setError(
@@ -115,6 +126,35 @@ export default function AddChildPage() {
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             placeholder="Au moins 6 caractères"
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor="child-class"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Classe
+          </label>
+          <select
+            id="child-class"
+            required
+            value={childClass}
+            onChange={(e) => setChildClass(e.target.value as ClassLevel)}
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          >
+            <option value="" disabled>
+              Sélectionnez la classe…
+            </option>
+            {CLASS_LEVELS.map((c) => (
+              <option key={c} value={c}>
+                {CLASS_LABELS[c]}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Les exercices sont adaptés à la classe. À chaque rentrée,
+            l&apos;application proposera le passage à la classe suivante.
+          </p>
         </div>
 
         {error && (

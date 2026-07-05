@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Quote, Volume2 } from "lucide-react";
-import { isTtsSupported, speak, stopSpeaking } from "@/lib/tts";
+import {
+  hasPioAudio,
+  isEarlyReaderMode,
+  isTtsSupported,
+  speak,
+  stopSpeaking,
+} from "@/lib/tts";
 
 /**
  * Renders an exercise prompt with a clean two-part layout when it contains
@@ -14,10 +20,17 @@ import { isTtsSupported, speak, stopSpeaking } from "@/lib/tts";
  *
  * Accessibilité — bouton 🔊 : lit la consigne à voix haute (Web Speech,
  * fr-FR) pour les lecteurs débutants. Indépendant des effets sonores.
+ * En mode « lecteur débutant » (CI/CP, posé par la session selon la classe
+ * du topic), la consigne est lue automatiquement à l'affichage et le bouton
+ * devient une pastille « Écouter » bien visible — un enfant de CP ne sait
+ * pas encore lire la consigne.
  */
 export default function ExercisePrompt({ prompt }: { prompt: string }) {
   const { instruction, quoted } = parsePrompt(prompt);
   const [ttsAvailable, setTtsAvailable] = useState(false);
+  // Posé par la session (selon la classe du topic) avant que les exercices
+  // ne se montent — stable pendant toute la session, lu une fois au montage.
+  const [earlyReader] = useState(() => isEarlyReaderMode());
 
   useEffect(() => {
     const t = setTimeout(() => setTtsAvailable(isTtsSupported()), 0);
@@ -27,15 +40,40 @@ export default function ExercisePrompt({ prompt }: { prompt: string }) {
     };
   }, []);
 
-  const readAloudButton = ttsAvailable ? (
-    <button
-      type="button"
-      onClick={() => speak(prompt)}
-      aria-label="Écouter la consigne"
-      className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-sky-200 bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100 active:scale-95"
-    >
-      <Volume2 className="h-4.5 w-4.5" aria-hidden />
-    </button>
+  // Auto-lecture à chaque nouvelle consigne pour les lecteurs débutants.
+  // Petit délai pour laisser l'exercice s'afficher avant que la voix parte.
+  // speak() choisit tout seul la voix de Pio (MP3) ou celle du navigateur.
+  useEffect(() => {
+    if (!isEarlyReaderMode()) return;
+    if (!isTtsSupported() && !hasPioAudio(prompt)) return;
+    const t = setTimeout(() => speak(prompt), 450);
+    return () => {
+      clearTimeout(t);
+      stopSpeaking();
+    };
+  }, [prompt]);
+
+  // Le MP3 de Pio rend le bouton utile même sans speechSynthesis.
+  const readAloudButton = (ttsAvailable || hasPioAudio(prompt)) ? (
+    earlyReader ? (
+      <button
+        type="button"
+        onClick={() => speak(prompt)}
+        className="mt-0.5 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border-2 border-b-4 border-sky-300 bg-sky-100 px-4 py-1.5 font-game text-sm font-bold text-sky-700 shadow-sm transition-all duration-100 hover:bg-sky-50 active:translate-y-[2px] active:border-b-2"
+      >
+        <Volume2 className="h-5 w-5" aria-hidden />
+        Écouter
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => speak(prompt)}
+        aria-label="Écouter la consigne"
+        className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-sky-200 bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100 active:scale-95"
+      >
+        <Volume2 className="h-4.5 w-4.5" aria-hidden />
+      </button>
+    )
   ) : null;
 
   if (!quoted) {

@@ -14,12 +14,14 @@
  */
 
 import type { AiPurpose } from "../aiGateway/registry";
+import type { ClassLevel } from "../classes";
 
-export type ClassLevel = "CI" | "CP" | "CE1" | "CE2" | "CM1" | "CM2";
+export type { ClassLevel };
 
 export interface PalierBasePromptInput {
   subject: string; // e.g. "Mathématiques"
   topic: string; // e.g. "Fractions"
+  topicDescription?: string; // précision pédagogique du topic (seedCurriculum)
   class: ClassLevel;
   palierIndex: number; // 1..10
 }
@@ -92,6 +94,40 @@ Cette expression sert à vérifier ta réponse automatiquement.
 Si l'exercice n'est pas réductible à une expression simple (problème verbal complexe),
 écris "mathExpression": null — un humain validera.`;
 
+/**
+ * CI/CP — l'enfant apprend tout juste à lire. Les consignes sont lues à voix
+ * haute par l'appli, mais l'exercice lui-même doit travailler le code écrit
+ * (lettres, sons, syllabes, mots) quand la matière est le Français.
+ */
+const isEarlyReaderClass = (cls: ClassLevel): boolean =>
+  cls === "CI" || cls === "CP";
+
+const isFrenchSubject = (subject: string): boolean => {
+  const s = subject.toLowerCase();
+  return s.includes("français") || s.includes("francais") || s.includes("lecture");
+};
+
+const earlyReaderNote = (cls: ClassLevel, subject: string): string => {
+  const base = `
+[Lecteurs débutants — ${cls}]
+- Cet enfant APPREND À LIRE : consignes de 3 à 8 mots maximum, vocabulaire très simple.
+- Une consigne = une seule action. L'application lit les consignes à voix haute.
+- Jamais de texte long dans l'énoncé ; les options doivent être courtes (une lettre, une syllabe ou un mot).`;
+  if (!isFrenchSubject(subject)) {
+    return `${base}
+- Situations très concrètes avec de petits nombres et des objets familiers.`;
+  }
+  return `${base}
+- Les exercices travaillent la LECTURE et l'ÉCRITURE :
+  * reconnaître une lettre, associer majuscule et minuscule (type "match" : A↔a) ;
+  * retrouver le son entendu dans un mot (type "qcm" : quel mot contient « ou » ?) ;
+  * remettre des syllabes dans l'ordre pour former un mot (type "order" : ma-man, vé-lo) ;
+  * classer des mots selon leur son (type "drag-drop") ;
+  * écrire un mot simple ou compléter la lettre manquante (type "short-answer" : m_to → moto).
+- Mots courts, réguliers et familiers au Sénégal : mama, papa, moto, sac, riz, vélo, mangue, banane.
+- ${cls === "CI" ? "CI : lettres, voyelles et syllabes simples uniquement — pas de sons complexes." : "CP : syllabes, mots simples, sons complexes courants (ou, oi, on, an, en) et petites phrases."}`;
+};
+
 const JSON_SHAPE = `
 [Format JSON STRICT — réponds UNIQUEMENT avec ce JSON, sans texte avant/après]
 {
@@ -130,13 +166,17 @@ ${SENEGAL_ANCHOR}
 - Pas de question à pièges méchants ; bienveillance toujours.
 - Au moins 3 types d'exos différents dans le palier (Decision 63).
 ${HINTS_RULE}
+${isEarlyReaderClass(input.class) ? earlyReaderNote(input.class, input.subject) : ""}
 ${isMaths ? MATH_OUTPUT_RULES : ""}`;
 }
 
 export function buildPalierBasePrompt(input: PalierBasePromptInput): string {
+  const topicDetail = input.topicDescription
+    ? `\nCe que ce thème travaille précisément : ${input.topicDescription}`
+    : "";
   return `[Tâche]
 Génère 10 exercices pour la matière "${input.subject}", thème "${input.topic}",
-palier ${input.palierIndex}/10, classe ${input.class}.
+palier ${input.palierIndex}/10, classe ${input.class}.${topicDetail}
 
 Types autorisés : ${TYPES_LIST}.
 ${DIFFICULTY_NOTE(input.palierIndex)}
@@ -182,6 +222,7 @@ ${SENEGAL_ANCHOR}
 - Reste au même niveau de difficulté.
 - Évite spécifiquement le piège qui a fait rater l'enfant — voir ses erreurs.
 ${HINTS_RULE}
+${isEarlyReaderClass(input.class) ? earlyReaderNote(input.class, input.subject) : ""}
 ${isMathSubject(input.subject) ? MATH_OUTPUT_RULES : ""}`;
 }
 
